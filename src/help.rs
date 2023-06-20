@@ -20,6 +20,7 @@ pub fn invalid_usage(msg: &str, subcommand: &str) -> String {
         .replace("{1}", (" ".to_owned() + subcommand).as_str())
 }
 
+// TODO: eventually have `nodes` and --node=NAME
 pub const HELP_STR: &str = "Command-line interface to control Octyne.
 This connects to your local Octyne instance over Unix socket, and lets you view
 and control applications running under it.
@@ -31,12 +32,13 @@ Options:
     -h, --help               Print help information
 
 Subcommands:
-    list, list-apps, apps    List all apps (WIP)
-    start                    Start an app (WIP)
-    stop                     Stop an app (WIP)
-    kill                     Kill an app (WIP)
-    restart                  Restart an app (WIP)
-    status                   Get the status of an app (WIP)
-    logs                     Get the logs of an app (WIP)
+    list, list-apps, apps    List all apps under Octyne
+    start                    Start an app managed by Octyne
+    stop                     Gracefully stop an app managed by Octyne
+    kill                     Kill an app managed by Octyne
+    restart                  Restart an app (NOT YET IMPLEMENTED)
+    status                   Get the status of an app (NOT YET IMPLEMENTED)
+    logs                     Get the logs of an app (NOT YET IMPLEMENTED)
+    console                  Open app console (NOT YET IMPLEMENTED)
     help                     Print this help message and exit
 ";

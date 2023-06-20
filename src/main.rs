@@ -37,6 +37,13 @@ async fn main() {
                 let subcommand = subcommand_tmp.as_str();
                 match subcommand {
                     "list" | "list-apps" | "apps" => crate::commands::list::list_cmd_help(),
+                    "start" => crate::commands::start::start_cmd_help(),
+                    "stop" => crate::commands::stop::stop_cmd_help(),
+                    "kill" => crate::commands::kill::kill_cmd_help(),
+                    "restart" => println!("Not implemented yet!"), // TODO
+                    "status" => println!("Not implemented yet!"),  // TODO
+                    "logs" => println!("Not implemented yet!"),    // TODO
+                    "console" => println!("Not implemented yet!"), // TODO
                     _ => {
                         println!(
                             "{}",
@@ -52,24 +59,13 @@ async fn main() {
         "list" | "list-apps" | "apps" => {
             crate::commands::list::list_cmd(args, top_level_opts).await
         }
-        "start" => {
-            println!("Not implemented yet."); // TODO
-        }
-        "stop" => {
-            println!("Not implemented yet."); // TODO
-        }
-        "kill" => {
-            println!("Not implemented yet."); // TODO
-        }
-        "restart" => {
-            println!("Not implemented yet."); // TODO
-        }
-        "status" => {
-            println!("Not implemented yet."); // TODO
-        }
-        "logs" => {
-            println!("Not implemented yet."); // TODO
-        }
+        "start" => crate::commands::start::start_cmd(args, top_level_opts).await,
+        "stop" => crate::commands::stop::stop_cmd(args, top_level_opts).await,
+        "kill" => crate::commands::kill::kill_cmd(args, top_level_opts).await,
+        "restart" => println!("Not implemented yet."), // TODO
+        "status" => println!("Not implemented yet."),  // TODO
+        "logs" => println!("Not implemented yet."),    // TODO
+        "console" => println!("Not implemented yet."), // TODO
         _ => {
             println!(
                 "{}",

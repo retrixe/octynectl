@@ -4,6 +4,7 @@ use hyper::Client;
 use hyperlocal::{UnixClientExt, Uri};
 use serde_json::{Map, Value};
 
+// TODO: cleanup with serde::Deserialize struct like start/stop/kill
 // TODO: add --format=json/csv flag, a flag to filter results would be neat too
 pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
