@@ -1,3 +1,4 @@
+mod commands;
 mod help;
 mod utils;
 
@@ -11,15 +12,14 @@ fn main() {
         println!("octynectl {}", env!("CARGO_PKG_VERSION"));
         return;
     }
-    if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
-        // TODO: Send help for specific subcommands down the line?
-        println!("{}", help::HELP_STR);
-        return;
-    }
 
     // Check for commands.
     if args.is_empty() {
-        println!("{}", help::invalid_usage(help::INCORRECT_USAGE, ""));
+        if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
+            println!("{}", help::HELP_STR);
+        } else {
+            println!("{}", help::invalid_usage(help::INCORRECT_USAGE, ""));
+        }
         return;
     }
 
@@ -28,11 +28,21 @@ fn main() {
     let subcommand = subcommand_tmp.as_str();
     match subcommand {
         "help" => {
-            println!("{}", help::HELP_STR);
+            if args.len() > 1 {
+                let subcommand_tmp = args[1].clone();
+                let subcommand = subcommand_tmp.as_str();
+                match subcommand {
+                    "list" | "list-servers" => crate::commands::list::list_cmd_help(),
+                    _ => println!(
+                        "{}",
+                        help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), "")
+                    ),
+                }
+                return;
+            }
+            println!("{}", help::HELP_STR)
         }
-        "list" | "list-servers" => {
-            println!("Not implemented yet."); // TODO
-        }
+        "list" | "list-servers" => crate::commands::list::list_cmd(args, top_level_opts),
         "start" => {
             println!("Not implemented yet."); // TODO
         }
@@ -52,7 +62,10 @@ fn main() {
             println!("Not implemented yet."); // TODO
         }
         _ => {
-            println!("{}", help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), ""));
+            println!(
+                "{}",
+                help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), "")
+            )
         }
     }
 }

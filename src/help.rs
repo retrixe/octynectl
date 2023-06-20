@@ -12,7 +12,12 @@ pub fn unknown_subcommand(subcommand: &str) -> String {
 }
 
 pub fn invalid_usage(msg: &str, subcommand: &str) -> String {
-    USAGE.replace("{0}", msg).replace("{1}", subcommand)
+    if subcommand.is_empty() {
+        return USAGE.replace("{0}", msg).replace("{1}", "");
+    }
+    USAGE
+        .replace("{0}", msg)
+        .replace("{1}", (" ".to_owned() + subcommand).as_str())
 }
 
 pub const HELP_STR: &str = "Command-line interface to control Octyne.
