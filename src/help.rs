@@ -21,6 +21,8 @@ pub fn invalid_usage(msg: &str, subcommand: &str) -> String {
 }
 
 pub const HELP_STR: &str = "Command-line interface to control Octyne.
+This connects to your local Octyne instance over Unix socket, and lets you view
+and control applications running under it.
 
 Usage: octynectl [OPTIONS] [SUBCOMMAND]
 
