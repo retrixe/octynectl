@@ -1,8 +1,11 @@
+use std::process::exit;
+
 mod commands;
 mod help;
 mod utils;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut args = std::env::args().collect::<Vec<String>>();
     args.remove(0);
 
@@ -19,6 +22,7 @@ fn main() {
             println!("{}", help::HELP_STR);
         } else {
             println!("{}", help::invalid_usage(help::INCORRECT_USAGE, ""));
+            exit(1);
         }
         return;
     }
@@ -32,17 +36,22 @@ fn main() {
                 let subcommand_tmp = args[1].clone();
                 let subcommand = subcommand_tmp.as_str();
                 match subcommand {
-                    "list" | "list-servers" => crate::commands::list::list_cmd_help(),
-                    _ => println!(
-                        "{}",
-                        help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), "")
-                    ),
+                    "list" | "list-apps" | "apps" => crate::commands::list::list_cmd_help(),
+                    _ => {
+                        println!(
+                            "{}",
+                            help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), "")
+                        );
+                        exit(1);
+                    }
                 }
                 return;
             }
             println!("{}", help::HELP_STR)
         }
-        "list" | "list-servers" => crate::commands::list::list_cmd(args, top_level_opts),
+        "list" | "list-apps" | "apps" => {
+            crate::commands::list::list_cmd(args, top_level_opts).await
+        }
         "start" => {
             println!("Not implemented yet."); // TODO
         }
@@ -65,7 +74,8 @@ fn main() {
             println!(
                 "{}",
                 help::invalid_usage(help::unknown_subcommand(subcommand).as_str(), "")
-            )
+            );
+            exit(1);
         }
     }
 }
