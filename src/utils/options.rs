@@ -5,17 +5,17 @@ pub fn parse_options(args: &mut Vec<String>, stop_when_non_arg: bool) -> HashMap
 
     let mut stop = false;
     args.retain(|orig| {
-        if orig.starts_with("-") && !stop {
+        if orig.starts_with('-') && !stop {
             let mut arg = orig.clone();
 
             // Get key/value pair.
             arg.remove(0);
-            if arg.starts_with("-") {
+            if arg.starts_with('-') {
                 arg.remove(0);
             }
 
             // Split key/value pair.
-            let mut arg = arg.split("=");
+            let mut arg = arg.split('=');
             let key = arg.next().unwrap();
             let value = arg.next().unwrap_or("");
             options_map.insert(key.to_string(), value.to_string());
@@ -23,8 +23,8 @@ pub fn parse_options(args: &mut Vec<String>, stop_when_non_arg: bool) -> HashMap
         } else if stop_when_non_arg {
             stop = true;
         }
-        return true;
+        true
     });
 
-    return options_map;
+    options_map
 }
