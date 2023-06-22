@@ -14,6 +14,7 @@ struct Response {
     error: String,
 }
 
+// TODO: support multiple apps down the line
 pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
         start_cmd_help();
@@ -43,7 +44,7 @@ pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String
 
     if res.status() != 200 && json.error.is_empty() {
         println!(
-            "Error: Received error status code {} from Octyne!",
+            "Error: Received status code {} from Octyne!",
             res.status().as_str()
         );
         exit(1);

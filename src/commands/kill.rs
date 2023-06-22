@@ -43,7 +43,7 @@ pub async fn kill_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 
     if res.status() != 200 && json.error.is_empty() {
         println!(
-            "Error: Received error status code {} from Octyne!",
+            "Error: Received status code {} from Octyne!",
             res.status().as_str()
         );
         exit(1);
