@@ -16,7 +16,13 @@ struct Response {
 
 // TODO: support multiple apps down the line
 pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
-    if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
+    let mut args = args.clone();
+    let opts = crate::utils::options::parse_options(&mut args, false);
+    if top_level_opts.contains_key("h")
+        || top_level_opts.contains_key("help")
+        || opts.contains_key("h")
+        || opts.contains_key("help")
+    {
         start_cmd_help();
         return;
     } else if args.len() != 2 {

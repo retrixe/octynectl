@@ -19,7 +19,11 @@ struct Response {
 pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
-    if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
+    if top_level_opts.contains_key("h")
+        || top_level_opts.contains_key("help")
+        || opts.contains_key("h")
+        || opts.contains_key("help")
+    {
         list_cmd_help();
         return;
     } else if args.len() != 1 {
