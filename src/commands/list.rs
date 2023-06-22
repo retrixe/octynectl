@@ -1,8 +1,10 @@
 use std::{collections::HashMap, process::exit};
 
 use hyper::Client;
-use hyperlocal::{UnixClientExt, Uri};
+use hyperlocal_with_windows::{UnixClientExt, Uri};
 use serde_json::{Map, Value};
+
+use crate::utils::misc;
 
 // TODO: cleanup with serde::Deserialize struct like start/stop/kill
 // TODO: add --format=json/csv flag, a flag to filter results would be neat too
@@ -18,7 +20,7 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         exit(1);
     }
 
-    let url = Uri::new("/tmp/octyne.sock.42069", "/servers").into();
+    let url = Uri::new(misc::default_octyne_path(), "/servers").into();
     let client = Client::unix();
     let response = client.get(url).await;
     let (res, body) = crate::utils::request::read_str_or_exit(response).await;

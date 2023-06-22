@@ -1,8 +1,10 @@
 use std::{collections::HashMap, process::exit};
 
 use hyper::{Body, Client, Method, Request};
-use hyperlocal::{UnixClientExt, Uri};
+use hyperlocal_with_windows::{UnixClientExt, Uri};
 use serde::Deserialize;
+
+use crate::utils::misc;
 
 #[derive(Deserialize, Debug)]
 struct Response {
@@ -28,7 +30,7 @@ pub async fn kill_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     let client = Client::unix();
     let req = Request::builder()
         .method(Method::POST)
-        .uri(Uri::new("/tmp/octyne.sock.42069", endpoint.as_str()))
+        .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
         .body(Body::from("KILL"))
         .expect("request builder");
     let response = client.request(req).await;
