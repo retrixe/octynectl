@@ -37,7 +37,7 @@ Subcommands:
     stop                     Gracefully stop an app managed by Octyne
     kill                     Kill an app managed by Octyne
     restart                  Restart an app (NOT YET IMPLEMENTED)
-    status                   Get the status of an app (NOT YET IMPLEMENTED)
+    status                   Get the status of an app
     logs                     Get the logs of an app (NOT YET IMPLEMENTED)
     console                  Open app console (NOT YET IMPLEMENTED)
     help                     Print this help message and exit

@@ -41,8 +41,8 @@ async fn main() {
                     "stop" => crate::commands::stop::stop_cmd_help(),
                     "kill" => crate::commands::kill::kill_cmd_help(),
                     "restart" => println!("Not implemented yet!"), // TODO
-                    "status" => println!("Not implemented yet!"),  // TODO
-                    "logs" => println!("Not implemented yet!"),    // TODO
+                    "status" | "info" => crate::commands::status::status_cmd_help(),
+                    "logs" => println!("Not implemented yet!"), // TODO
                     "console" => println!("Not implemented yet!"), // TODO
                     _ => {
                         println!(
@@ -63,8 +63,8 @@ async fn main() {
         "stop" => crate::commands::stop::stop_cmd(args, top_level_opts).await,
         "kill" => crate::commands::kill::kill_cmd(args, top_level_opts).await,
         "restart" => println!("Not implemented yet."), // TODO
-        "status" => println!("Not implemented yet."),  // TODO
-        "logs" => println!("Not implemented yet."),    // TODO
+        "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
+        "logs" => println!("Not implemented yet."), // TODO
         "console" => println!("Not implemented yet."), // TODO
         _ => {
             println!(
