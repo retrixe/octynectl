@@ -2,13 +2,23 @@ use std::{collections::HashMap, process::exit};
 
 use hyper::Client;
 use hyperlocal_with_windows::{UnixClientExt, Uri};
+use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::utils::misc;
 
-// TODO: cleanup with serde::Deserialize struct like start/stop/kill
-// TODO: add --format=json/csv flag, a flag to filter results would be neat too
+#[derive(Deserialize, Debug)]
+struct Response {
+    #[serde(default)]
+    servers: Map<String, Value>,
+    #[serde(default)]
+    error: String,
+}
+
+// TODO: add --filter=glob
 pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
+    let mut args = args.clone();
+    let opts = crate::utils::options::parse_options(&mut args, false);
     if top_level_opts.contains_key("h") || top_level_opts.contains_key("help") {
         list_cmd_help();
         return;
@@ -20,54 +30,67 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         exit(1);
     }
 
+    // Check --format=json/csv/table flag
+    let mut format = "table";
+    if let Some(format_value) = opts.get("format") {
+        if format_value != "json" && format_value != "csv" && format_value != "table" {
+            println!(
+                "Error: Invalid value for flag --format \"{}\"! (Valid values: json,csv,table)",
+                format_value
+            );
+            exit(1);
+        }
+        format = format_value;
+    }
+
     let url = Uri::new(misc::default_octyne_path(), "/servers").into();
     let client = Client::unix();
     let response = client.get(url).await;
     let (res, body) = crate::utils::request::read_str_or_exit(response).await;
 
-    let parsed: Map<String, Value> = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
+    let json: Response = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
         println!("Error: Received corrupt response from Octyne! {}", e);
         exit(1);
     });
 
-    if res.status() != 200 {
+    if !json.error.is_empty() {
+        println!("Error: {}", json.error);
+        exit(1);
+    } else if res.status() != 200 {
         let default = format!(
-            "Error: Received error status code {} from Octyne!",
+            "Error: Received status code {} from Octyne!",
             res.status().as_str()
         );
-        let error = parsed.get("error");
-        match error {
-            Some(value) => println!("Error: {}", value.as_str().unwrap_or(default.as_str())),
-            None => println!("{}", default),
-        }
+        println!("{}", default);
         exit(1);
     }
 
-    let servers = parsed
-        .get("servers")
-        .unwrap_or_else(|| {
-            println!("Error: Received corrupt response from Octyne!");
-            exit(1);
-        })
-        .as_object()
-        .unwrap_or_else(|| {
-            println!("Error: Received corrupt response from Octyne!");
-            exit(1);
-        });
+    if format == "json" {
+        println!("{}", serde_json::to_string_pretty(&json.servers).unwrap());
+        return;
+    } else if format == "csv" {
+        println!("name,status");
+        for server in json.servers {
+            let (name, status_value) = server;
+            let status = status_to_text(status_value.as_i64().unwrap_or(-1)).to_lowercase();
+            println!("{},{}", name, status);
+        }
+        return;
+    }
 
-    if servers.is_empty() {
+    if json.servers.is_empty() {
         println!("No apps are running under the local Octyne instance.");
         return;
     }
 
     // TODO: a table would look nice here
     println!("Apps running under the local Octyne instance:\n");
-    let longest_name = servers.keys().map(|s| s.len()).max().unwrap_or(0);
-    for server in servers {
+    let longest_name = json.servers.keys().map(|s| s.len()).max().unwrap_or(0);
+    for server in json.servers {
         let (name, status_value) = server;
         let status = status_to_text(status_value.as_i64().unwrap_or(-1));
 
-        println!("    {}{} - {}", name, pad_name(name, longest_name), status);
+        println!("    {}{} | {}", name, pad_name(&name, longest_name), status);
     }
 }
 
@@ -98,6 +121,8 @@ Usage: octynectl list-apps [OPTIONS]
 Aliases: list, apps
 
 Options:
-    -h, --help               Print help information"
+    -h, --help           Print help information
+    --format=<format>    Format to print the list of apps in. Valid values: json,csv,table
+                         Default: table"
     );
 }
