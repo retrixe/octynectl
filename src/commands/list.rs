@@ -87,7 +87,6 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         return;
     }
 
-    // TODO: a table would look nice here
     println!("Apps running under the local Octyne instance:\n");
     let longest_name = json.servers.keys().map(|s| s.len()).max().unwrap_or(0);
     for server in json.servers {

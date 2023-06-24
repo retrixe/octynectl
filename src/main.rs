@@ -4,6 +4,7 @@ mod commands;
 mod help;
 mod utils;
 
+// TODO: we need man pages down the line
 #[tokio::main]
 async fn main() {
     let mut args = std::env::args().collect::<Vec<String>>();
