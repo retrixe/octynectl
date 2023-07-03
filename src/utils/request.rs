@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use hyper::{body::HttpBody, Body, Error, Response};
 
 pub async fn read_data(
@@ -37,13 +35,4 @@ pub async fn read_str(
         },
         Err(e) => Err(e),
     }
-}
-
-#[deprecated]
-pub async fn read_str_or_exit(response: Result<Response<Body>, Error>) -> (Response<Body>, String) {
-    let (res, parsed) = read_str(response).await.unwrap_or_else(|e| {
-        println!("{}", e);
-        exit(1);
-    });
-    (res, parsed)
 }

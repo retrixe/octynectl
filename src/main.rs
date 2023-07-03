@@ -1,5 +1,6 @@
 use std::process::exit;
 
+mod api;
 mod commands;
 mod help;
 mod utils;

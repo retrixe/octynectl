@@ -1,25 +1,6 @@
 use std::{collections::HashMap, process::exit};
 
-use hyper::Client;
-use hyperlocal_with_windows::{UnixClientExt, Uri};
-use serde::Deserialize;
-
-use crate::utils::misc;
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct Response {
-    #[serde(default)]
-    error: String,
-    #[serde(default)]
-    cpu_usage: f64,
-    #[serde(default)]
-    memory_usage: i64,
-    #[serde(default)]
-    total_memory: i64,
-    #[serde(default)]
-    uptime: i64,
-}
+use crate::api::server::get_server;
 
 // TODO: Support multiple apps down the line
 pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
@@ -40,27 +21,13 @@ pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
         exit(1);
     }
 
-    let endpoint = format!("/server/{}", args[1]);
-    let client = Client::unix();
-    let uri = Uri::new(misc::default_octyne_path(), endpoint.as_str()).into();
-    let response = client.get(uri).await;
-    let (res, body) = crate::utils::request::read_str_or_exit(response).await;
-
-    let json: Response = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
-        println!("Error: Received corrupt response from Octyne! {}", e);
-        exit(1);
-    });
-
-    if res.status() != 200 && json.error.is_empty() {
-        println!(
-            "Error: Received status code {} from Octyne!",
-            res.status().as_str()
-        );
-        exit(1);
-    } else if !json.error.is_empty() {
-        println!("Error: {}", json.error);
-        exit(1);
-    }
+    let json = match get_server(args[1].clone()).await {
+        Ok(json) => json,
+        Err(e) => {
+            println!("{}", e);
+            exit(1);
+        }
+    };
 
     println!("\nStatus of app `{}`:", args[1]);
     println!("================={}", "=".repeat(args[1].len()));

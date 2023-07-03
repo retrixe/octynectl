@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process::exit};
 
-use crate::utils::api;
+use crate::api::server::{post_server, PostServerAction};
 
 pub async fn stop_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
@@ -23,7 +23,7 @@ pub async fn stop_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     // TODO: should this be sequential or...? maybe --parallel for advanced users?... lol
     let mut any_errored = false;
     for server_name in args[1..].iter() {
-        match api::post_server(server_name.to_string(), api::PostServerAction::Term).await {
+        match post_server(server_name.to_string(), PostServerAction::Term).await {
             Ok(_) => {}
             Err(e) => {
                 println!("{}", e);

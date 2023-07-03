@@ -50,7 +50,12 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     let url = Uri::new(misc::default_octyne_path(), "/servers").into();
     let client = Client::unix();
     let response = client.get(url).await;
-    let (res, body) = crate::utils::request::read_str_or_exit(response).await;
+    let (res, body) = crate::utils::request::read_str(response)
+        .await
+        .unwrap_or_else(|e| {
+            println!("{}", e);
+            exit(1);
+        });
 
     let json: Response = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
         println!("Error: Received corrupt response from Octyne! {}", e);
