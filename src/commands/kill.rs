@@ -20,7 +20,6 @@ pub async fn kill_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         exit(1);
     }
 
-    // TODO: should this be sequential or...? maybe --parallel for advanced users?... lol
     let mut any_errored = false;
     for server_name in args[1..].iter() {
         match post_server(server_name.to_string(), PostServerAction::Kill).await {

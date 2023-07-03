@@ -58,7 +58,7 @@ pub async fn post_server(server_name: String, action: PostServerAction) -> Resul
             action.to_string().to_lowercase()
         ));
     }
-    return Ok(());
+    Ok(())
 }
 
 #[derive(Deserialize, Debug)]

@@ -31,6 +31,7 @@ pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
 
     println!("\nStatus of app `{}`:", args[1]);
     println!("================={}", "=".repeat(args[1].len()));
+    // TODO: is it online or offline.........
     println!("CPU usage: {:.2}%", json.cpu_usage);
     let memory_usage = json.memory_usage as f64 / 1024.0 / 1024.0;
     let total_memory = json.total_memory as f64 / 1024.0 / 1024.0;

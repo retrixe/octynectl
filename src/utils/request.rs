@@ -26,7 +26,7 @@ pub async fn read_str(
     response: Result<Response<Body>, Error>,
 ) -> Result<(Response<Body>, String), String> {
     match read_data(response).await {
-        Ok((res, bytes)) => match String::from_utf8(bytes.clone()) {
+        Ok((res, bytes)) => match String::from_utf8(bytes) {
             Ok(parsed) => Ok((res, parsed)),
             Err(e) => Err(format!(
                 "Error: Received corrupt response from Octyne! {}",
