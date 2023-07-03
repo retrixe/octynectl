@@ -1,20 +1,7 @@
 use std::{collections::HashMap, process::exit};
 
-use hyper::{Body, Client, Method, Request};
-use hyperlocal_with_windows::{UnixClientExt, Uri};
-use serde::Deserialize;
+use crate::utils::api;
 
-use crate::utils::misc;
-
-#[derive(Deserialize, Debug)]
-struct Response {
-    #[serde(default)]
-    success: bool,
-    #[serde(default)]
-    error: String,
-}
-
-// TODO: support multiple apps down the line
 pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -25,7 +12,7 @@ pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String
     {
         start_cmd_help();
         return;
-    } else if args.len() != 2 {
+    } else if args.len() < 2 {
         println!(
             "{}",
             crate::help::invalid_usage(crate::help::INCORRECT_USAGE, "start")
@@ -33,32 +20,18 @@ pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String
         exit(1);
     }
 
-    let endpoint = format!("/server/{}", args[1]);
-    let client = Client::unix();
-    let req = Request::builder()
-        .method(Method::POST)
-        .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
-        .body(Body::from("START"))
-        .expect("request builder");
-    let response = client.request(req).await;
-    let (res, body) = crate::utils::request::read_str_or_exit(response).await;
-
-    let json: Response = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
-        println!("Error: Received corrupt response from Octyne! {}", e);
-        exit(1);
-    });
-
-    if res.status() != 200 && json.error.is_empty() {
-        println!(
-            "Error: Received status code {} from Octyne!",
-            res.status().as_str()
-        );
-        exit(1);
-    } else if !json.error.is_empty() {
-        println!("Error: {}", json.error);
-        exit(1);
-    } else if !json.success {
-        println!("Error: Octyne failed to start the app!");
+    // TODO: should this be sequential or...? maybe --parallel for advanced users?... lol
+    let mut any_errored = false;
+    for server_name in args[1..].iter() {
+        match api::post_server(server_name.to_string(), api::PostServerAction::Start).await {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+                any_errored = true;
+            }
+        }
+    }
+    if any_errored {
         exit(1);
     }
 }
@@ -67,7 +40,7 @@ pub fn start_cmd_help() {
     println!(
         "Start an app managed by Octyne.
 
-Usage: octynectl start [OPTIONS] [APP NAME]
+Usage: octynectl start [OPTIONS] [APP NAMES...]
 
 Options:
     -h, --help               Print help information"
