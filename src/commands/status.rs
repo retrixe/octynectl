@@ -12,7 +12,7 @@ struct Response {
     #[serde(default)]
     error: String,
     #[serde(default)]
-    cpu_usage: i64,
+    cpu_usage: f64,
     #[serde(default)]
     memory_usage: i64,
     #[serde(default)]
@@ -21,6 +21,7 @@ struct Response {
     uptime: i64,
 }
 
+// TODO: Support multiple apps down the line
 pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -63,7 +64,7 @@ pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
 
     println!("\nStatus of app `{}`:", args[1]);
     println!("================={}", "=".repeat(args[1].len()));
-    println!("CPU usage: {}%", json.cpu_usage);
+    println!("CPU usage: {:.2}%", json.cpu_usage);
     let memory_usage = json.memory_usage as f64 / 1024.0 / 1024.0;
     let total_memory = json.total_memory as f64 / 1024.0 / 1024.0;
     let memory_percentage = memory_usage / total_memory * 100.0;
@@ -71,7 +72,7 @@ pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
         "Memory usage: {:.2}% ({:.2} MB / {:.0} MB)",
         memory_percentage, memory_usage, total_memory
     );
-    println!("Uptime: {}%", parse_duration(json.uptime));
+    println!("Uptime: {}", parse_duration(json.uptime));
 }
 
 pub fn status_cmd_help() {
