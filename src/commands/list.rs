@@ -7,6 +7,7 @@ use serde_json::{Map, Value};
 
 use crate::utils::misc;
 
+// TODO: Support extrainfo_unstable(?)
 #[derive(Deserialize, Debug)]
 struct Response {
     #[serde(default)]

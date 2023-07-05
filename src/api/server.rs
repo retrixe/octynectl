@@ -67,6 +67,8 @@ pub struct GetServerResponse {
     #[serde(default)]
     pub error: String,
     #[serde(default)]
+    pub status: i32,
+    #[serde(default)]
     pub cpu_usage: f64,
     #[serde(default)]
     pub memory_usage: i64,
@@ -74,6 +76,8 @@ pub struct GetServerResponse {
     pub total_memory: i64,
     #[serde(default)]
     pub uptime: i64,
+    #[serde(default)]
+    pub to_delete: bool,
 }
 
 pub async fn get_server(server_name: String) -> Result<GetServerResponse, String> {
