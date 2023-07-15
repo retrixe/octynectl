@@ -6,7 +6,7 @@ use crate::utils::misc;
 
 use super::common::ActionResponse;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PostServerAction {
     Start,
     Kill,
@@ -39,7 +39,7 @@ pub async fn post_server(server_name: String, action: PostServerAction) -> Resul
         Ok(json) => json,
         Err(e) => {
             return Err(format!(
-                "Error: Received corrupt response from Octyne! {}",
+                "Received corrupt response from Octyne! {}",
                 e
             ));
         }
@@ -47,14 +47,14 @@ pub async fn post_server(server_name: String, action: PostServerAction) -> Resul
 
     if res.status() != 200 && json.error.is_empty() {
         return Err(format!(
-            "Error: Received status code {} from Octyne!",
+            "Received status code {} from Octyne!",
             res.status().as_str()
         ));
     } else if !json.error.is_empty() {
-        return Err(format!("Error: {}", json.error));
+        return Err(json.error);
     } else if !json.success {
         return Err(format!(
-            "Error: Octyne failed to {} the app!",
+            "Octyne failed to {} the app!",
             action.to_string().to_lowercase()
         ));
     }
@@ -95,17 +95,20 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     let json: GetServerResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
         Err(e) => {
-            return Err(format!("Error: Received corrupt response from Octyne! {}", e));
+            return Err(format!(
+                "Received corrupt response from Octyne! {}",
+                e
+            ));
         }
     };
 
     if res.status() != 200 && json.error.is_empty() {
         return Err(format!(
-            "Error: Received status code {} from Octyne!",
+            "Received status code {} from Octyne!",
             res.status().as_str()
         ));
     } else if !json.error.is_empty() {
-        return Err(format!("Error: {}", json.error));
+        return Err(json.error);
     }
     Ok(json)
 }

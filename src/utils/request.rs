@@ -12,13 +12,13 @@ pub async fn read_data(
                         bytes.extend_from_slice(&chunk);
                     }
                     Err(e) => {
-                        return Err(format!("Error reading from Octyne socket: {}", e));
+                        return Err(format!("Error reading from Octyne socket! {}", e));
                     }
                 }
             }
             Ok((response, bytes))
         }
-        Err(e) => Err(format!("Error requesting info from Octyne socket: {}", e)),
+        Err(e) => Err(format!("Error requesting info from Octyne socket! {}", e)),
     }
 }
 
@@ -29,7 +29,7 @@ pub async fn read_str(
         Ok((res, bytes)) => match String::from_utf8(bytes) {
             Ok(parsed) => Ok((res, parsed)),
             Err(e) => Err(format!(
-                "Error: Received corrupt response from Octyne! {}",
+                "Received corrupt response from Octyne! {}",
                 e
             )),
         },

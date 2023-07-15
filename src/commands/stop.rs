@@ -25,7 +25,7 @@ pub async fn stop_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         match post_server(server_name.to_string(), PostServerAction::Term).await {
             Ok(_) => {}
             Err(e) => {
-                println!("{}", e);
+                println!("Error stopping {}: {}", server_name, e);
                 any_errored = true;
             }
         }

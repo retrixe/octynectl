@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process::exit};
 
-use crate::api::server::{PostServerAction, post_server};
+use crate::api::server::{post_server, PostServerAction};
 
 pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
@@ -25,7 +25,7 @@ pub async fn start_cmd(args: Vec<String>, top_level_opts: HashMap<String, String
         match post_server(server_name.to_string(), PostServerAction::Start).await {
             Ok(_) => {}
             Err(e) => {
-                println!("{}", e);
+                println!("Error starting {}: {}", server_name, e);
                 any_errored = true;
             }
         }

@@ -54,7 +54,7 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     let (res, body) = crate::utils::request::read_str(response)
         .await
         .unwrap_or_else(|e| {
-            println!("{}", e);
+            println!("Error: {}", e);
             exit(1);
         });
 

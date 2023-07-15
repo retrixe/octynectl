@@ -24,14 +24,18 @@ pub async fn status_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
     let json = match get_server(args[1].clone()).await {
         Ok(json) => json,
         Err(e) => {
-            println!("{}", e);
+            println!("Error: {}", e);
             exit(1);
         }
     };
 
     println!("\nStatus of app `{}`:", args[1]);
     println!("================={}", "=".repeat(args[1].len()));
-    println!("Status: {}{}", parse_status(json.status), parse_to_delete(json.to_delete));
+    println!(
+        "Status: {}{}",
+        parse_status(json.status),
+        parse_to_delete(json.to_delete)
+    );
     println!("CPU usage: {:.2}%", json.cpu_usage);
     let memory_usage = json.memory_usage as f64 / 1024.0 / 1024.0;
     let total_memory = json.total_memory as f64 / 1024.0 / 1024.0;
@@ -98,7 +102,7 @@ fn parse_status(status: i32) -> String {
         1 => "Online".to_string(),
         2 => "Crashed".to_string(),
         _ => "Unknown".to_string(),
-    }
+    };
 }
 
 fn parse_to_delete(to_delete: bool) -> String {

@@ -25,7 +25,7 @@ pub async fn kill_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         match post_server(server_name.to_string(), PostServerAction::Kill).await {
             Ok(_) => {}
             Err(e) => {
-                println!("{}", e);
+                println!("Error killing {}: {}", server_name, e);
                 any_errored = true;
             }
         }
