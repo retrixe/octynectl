@@ -1,8 +1,7 @@
 use std::{collections::HashMap, process::exit};
 
-use crate::api::accounts::{delete_account, get_accounts};
+use crate::api::accounts::{create_account, delete_account, get_accounts, patch_account};
 
-// TODO: Move API calls into src/api/accounts.rs file.
 pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -66,7 +65,32 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
             exit(1);
         }
 
-        // TODO: Prompt for password, then POST, then log "Successfully created account {}"
+        let pass = match rpassword::prompt_password("New password for account: ") {
+            Ok(pass) => pass,
+            Err(err) => {
+                println!("Error: Failed to read password! {}", err.to_string());
+                exit(1);
+            }
+        };
+        match rpassword::prompt_password("Confirm password: ") {
+            Ok(confirm_pass) => {
+                if confirm_pass != pass {
+                    println!("Error: Passwords do not match!");
+                    exit(1);
+                }
+            }
+            Err(err) => {
+                println!("Error: Failed to read password! {}", err.to_string());
+                exit(1);
+            }
+        };
+        create_account(args[2].to_owned(), pass)
+            .await
+            .unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            });
+        println!("Successfully created account {}", args[2]);
     } else if args[1] == "delete" || args[1] == "remove" {
         if top_level_opts.contains_key("h")
             || top_level_opts.contains_key("help")
@@ -114,7 +138,32 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
             exit(1);
         }
 
-        // TODO: Prompt for password, then POST, then log "Successfully changed password for account {}"
+        let pass = match rpassword::prompt_password("New password for account: ") {
+            Ok(pass) => pass,
+            Err(err) => {
+                println!("Error: Failed to read password! {}", err.to_string());
+                exit(1);
+            }
+        };
+        match rpassword::prompt_password("Confirm password: ") {
+            Ok(confirm_pass) => {
+                if confirm_pass != pass {
+                    println!("Error: Passwords do not match!");
+                    exit(1);
+                }
+            }
+            Err(err) => {
+                println!("Error: Failed to read password! {}", err.to_string());
+                exit(1);
+            }
+        };
+        patch_account(args[2].to_owned(), pass)
+            .await
+            .unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            });
+        println!("Successfully changed password for account {}", args[2]);
     } else {
         println!(
             "{}",
@@ -130,7 +179,7 @@ pub fn accounts_cmd_help() {
 
 Usage: octynectl accounts [OPTIONS] [SUBCOMMAND]
 
-Aliases: account
+Aliases: account, users, user
 
 Subcommands:
     list, show           List all accounts
@@ -160,7 +209,7 @@ pub fn accounts_create_cmd_help() {
     println!(
         "Create a new Octyne account. You will be prompted for a password.
 
-Usage: octynectl accounts create [OPTIONS] [ACCOUNT NAME]
+Usage: octynectl accounts create [OPTIONS] [USERNAME]
 
 Aliases: add
 
@@ -173,7 +222,7 @@ pub fn accounts_delete_cmd_help() {
     println!(
         "Delete Octyne accounts.
 
-Usage: octynectl accounts delete [OPTIONS] [ACCOUNT NAMES...]
+Usage: octynectl accounts delete [OPTIONS] [USERNAMES...]
 
 Aliases: remove
 
@@ -186,7 +235,7 @@ pub fn accounts_passwd_cmd_help() {
     println!(
         "Change the password of an existing Octyne account.
 
-Usage: octynectl accounts passwd [OPTIONS] [ACCOUNT NAME]
+Usage: octynectl accounts passwd [OPTIONS] [USERNAME]
 
 Options:
     -h, --help           Print help information"
