@@ -7,6 +7,7 @@ use serde_json::{Map, Value};
 
 use crate::utils::misc;
 
+// TODO: Move API calls into api/servers.rs file
 #[derive(Deserialize, Debug)]
 struct Response {
     #[serde(default)]

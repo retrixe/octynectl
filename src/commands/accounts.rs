@@ -1,18 +1,8 @@
 use std::{collections::HashMap, process::exit};
 
-use hyper::Client;
-use hyperlocal_with_windows::{UnixClientExt, Uri};
-use serde::Deserialize;
-use serde_json::Value;
+use crate::api::accounts::{delete_account, get_accounts};
 
-use crate::utils::misc;
-
-#[derive(Deserialize, Debug)]
-struct ErrorResponse {
-    #[serde(default)]
-    error: String,
-}
-
+// TODO: Move API calls into src/api/accounts.rs file.
 pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -46,43 +36,8 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
             exit(1);
         }
 
-        let url = Uri::new(misc::default_octyne_path(), "/accounts").into();
-        let client = Client::unix();
-        let response = client.get(url).await;
-        let (res, body) = crate::utils::request::read_str(response)
-            .await
-            .unwrap_or_else(|e| {
-                println!("Error: {}", e);
-                exit(1);
-            });
-
-        let json: Value = serde_json::from_str(body.trim()).unwrap_or_else(|e| {
-            println!("Error: Received corrupt response from Octyne! {}", e);
-            exit(1);
-        });
-
-        if json.is_object() {
-            let resp: ErrorResponse = serde_json::from_value(json).unwrap_or_else(|_| {
-                println!("Error: Received corrupt response from Octyne!");
-                exit(1);
-            });
-            if resp.error.is_empty() {
-                println!("Error: Received corrupt response from Octyne!");
-            } else {
-                println!("Error: {}", resp.error);
-            }
-            exit(1);
-        } else if res.status() != 200 {
-            let default = format!(
-                "Error: Received status code {} from Octyne!",
-                res.status().as_str()
-            );
-            println!("{}", default);
-            exit(1);
-        }
-
-        let accounts: Vec<String> = serde_json::from_value(json).unwrap_or_else(|e| {
-            println!("Error: Received corrupt response from Octyne! {}", e);
+        let accounts = get_accounts().await.unwrap_or_else(|e| {
+            println!("Error: {}", e);
             exit(1);
         });
 
@@ -120,7 +75,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
         {
             accounts_delete_cmd_help();
             return;
-        } else if args.len() != 3 {
+        } else if args.len() < 3 {
             println!(
                 "{}",
                 crate::help::invalid_usage(crate::help::INCORRECT_USAGE, "accounts delete")
@@ -128,7 +83,21 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
             exit(1);
         }
 
-        // TODO: Delete the account, then log "Successfully deleted account {}"
+        let mut any_errored = false;
+        for username in args[2..].iter() {
+            match delete_account(username.to_string()).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error deleting account {}: {}", username, e);
+                    any_errored = true;
+                }
+            }
+        }
+        if any_errored {
+            exit(1);
+        } else {
+            println!("Successfully deleted all accounts!");
+        }
     } else if args[1] == "passwd" {
         if top_level_opts.contains_key("h")
             || top_level_opts.contains_key("help")
@@ -166,7 +135,7 @@ Aliases: account
 Subcommands:
     list, show           List all accounts
     create, add          Create a new account
-    delete, remove       Delete an account
+    delete, remove       Delete accounts
     passwd               Change password of an existing account
 
 Options:
@@ -191,7 +160,7 @@ pub fn accounts_create_cmd_help() {
     println!(
         "Create a new Octyne account. You will be prompted for a password.
 
-Usage: octynectl accounts create [OPTIONS]
+Usage: octynectl accounts create [OPTIONS] [ACCOUNT NAME]
 
 Aliases: add
 
@@ -202,9 +171,9 @@ Options:
 
 pub fn accounts_delete_cmd_help() {
     println!(
-        "Delete an Octyne account.
+        "Delete Octyne accounts.
 
-Usage: octynectl accounts create [OPTIONS]
+Usage: octynectl accounts delete [OPTIONS] [ACCOUNT NAMES...]
 
 Aliases: remove
 
@@ -217,7 +186,7 @@ pub fn accounts_passwd_cmd_help() {
     println!(
         "Change the password of an existing Octyne account.
 
-Usage: octynectl accounts passwd [OPTIONS]
+Usage: octynectl accounts passwd [OPTIONS] [ACCOUNT NAME]
 
 Options:
     -h, --help           Print help information"

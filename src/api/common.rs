@@ -7,3 +7,9 @@ pub struct ActionResponse {
     #[serde(default)]
     pub error: String,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct ErrorResponse {
+    #[serde(default)]
+    pub error: String,
+}
