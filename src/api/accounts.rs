@@ -31,7 +31,7 @@ pub async fn get_accounts() -> Result<Vec<String>, String> {
             Err(e) => return Err(format!("Received corrupt response from Octyne! {}", e)),
         };
         if resp.error.is_empty() {
-            return Err(format!("Received corrupt response from Octyne!"));
+            return Err("Received corrupt response from Octyne!".to_string());
         } else {
             return Err(resp.error);
         }
@@ -43,8 +43,8 @@ pub async fn get_accounts() -> Result<Vec<String>, String> {
     }
 
     match serde_json::from_value(json) {
-        Ok(accounts) => return Ok(accounts),
-        Err(err) => return Err(format!("Received corrupt response from Octyne! {}", err)),
+        Ok(accounts) => Ok(accounts),
+        Err(err) => Err(format!("Received corrupt response from Octyne! {}", err)),
     }
 }
 
@@ -80,13 +80,13 @@ struct PostAccountRequest {
 
 async fn post_account(username: String, password: String, method: Method) -> Result<bool, String> {
     let body = serde_json::to_string(&PostAccountRequest {
-        username: username,
-        password: password,
+        username,
+        password,
     });
     if body.is_err() {
         return Err(body.unwrap_err().to_string());
     }
-    let endpoint = format!("/accounts");
+    let endpoint = "/accounts".to_string();
     let client = Client::unix();
     let req = Request::builder()
         .method(method)

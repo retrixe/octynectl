@@ -120,16 +120,16 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 fn parse_status_value(status_value: Value) -> ServerExtraInfo {
     match status_value.as_i64() {
         Some(status) => {
-            return ServerExtraInfo {
+            ServerExtraInfo {
                 online: status,
                 to_delete: false,
             }
         }
         None => {
-            return serde_json::from_value(status_value).unwrap_or_else(|_| ServerExtraInfo {
+            serde_json::from_value(status_value).unwrap_or(ServerExtraInfo {
                 online: -1,
                 to_delete: false,
-            });
+            })
         }
     }
 }

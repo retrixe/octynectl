@@ -97,17 +97,17 @@ fn parse_duration(duration_nano: i64) -> String {
 }
 
 fn parse_status(status: i32) -> String {
-    return match status {
+    match status {
         0 => "Offline".to_string(),
         1 => "Online".to_string(),
         2 => "Crashed".to_string(),
         _ => "Unknown".to_string(),
-    };
+    }
 }
 
 fn parse_to_delete(to_delete: bool) -> String {
-    return match to_delete {
+    match to_delete {
         true => " (marked for deletion)".to_string(),
         false => "".to_string(),
-    };
+    }
 }

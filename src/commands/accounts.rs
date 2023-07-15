@@ -5,15 +5,14 @@ use crate::api::accounts::{create_account, delete_account, get_accounts, patch_a
 pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
-    if args.len() == 0
+    if args.is_empty()
         && (top_level_opts.contains_key("h")
             || top_level_opts.contains_key("help")
             || opts.contains_key("h")
             || opts.contains_key("help"))
     {
         accounts_cmd_help();
-        return;
-    } else if args.len() == 0 {
+    } else if args.is_empty() {
         println!(
             "{}",
             crate::help::invalid_usage(crate::help::INCORRECT_USAGE, "accounts")
@@ -68,7 +67,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
         let pass = match rpassword::prompt_password("New password for account: ") {
             Ok(pass) => pass,
             Err(err) => {
-                println!("Error: Failed to read password! {}", err.to_string());
+                println!("Error: Failed to read password! {}", err);
                 exit(1);
             }
         };
@@ -80,7 +79,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
                 }
             }
             Err(err) => {
-                println!("Error: Failed to read password! {}", err.to_string());
+                println!("Error: Failed to read password! {}", err);
                 exit(1);
             }
         };
@@ -141,7 +140,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
         let pass = match rpassword::prompt_password("New password for account: ") {
             Ok(pass) => pass,
             Err(err) => {
-                println!("Error: Failed to read password! {}", err.to_string());
+                println!("Error: Failed to read password! {}", err);
                 exit(1);
             }
         };
@@ -153,7 +152,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
                 }
             }
             Err(err) => {
-                println!("Error: Failed to read password! {}", err.to_string());
+                println!("Error: Failed to read password! {}", err);
                 exit(1);
             }
         };
