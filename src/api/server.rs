@@ -38,10 +38,7 @@ pub async fn post_server(server_name: String, action: PostServerAction) -> Resul
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
         Err(e) => {
-            return Err(format!(
-                "Received corrupt response from Octyne! {}",
-                e
-            ));
+            return Err(format!("Received corrupt response from Octyne! {}", e));
         }
     };
 
@@ -95,10 +92,7 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     let json: GetServerResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
         Err(e) => {
-            return Err(format!(
-                "Received corrupt response from Octyne! {}",
-                e
-            ));
+            return Err(format!("Received corrupt response from Octyne! {}", e));
         }
     };
 
