@@ -12,13 +12,13 @@ pub async fn read_data(
                         bytes.extend_from_slice(&chunk);
                     }
                     Err(e) => {
-                        return Err(format!("Error reading from Octyne socket! {}", e));
+                        return Err(format!("Failed to read from Octyne socket! {}", e));
                     }
                 }
             }
             Ok((response, bytes))
         }
-        Err(e) => Err(format!("Error requesting info from Octyne socket! {}", e)),
+        Err(e) => Err(format!("Failed to read response from Octyne socket! {}", e)),
     }
 }
 
