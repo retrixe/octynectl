@@ -79,10 +79,7 @@ struct PostAccountRequest {
 }
 
 async fn post_account(username: String, password: String, method: Method) -> Result<bool, String> {
-    let body = serde_json::to_string(&PostAccountRequest {
-        username,
-        password,
-    });
+    let body = serde_json::to_string(&PostAccountRequest { username, password });
     if body.is_err() {
         return Err(body.unwrap_err().to_string());
     }
