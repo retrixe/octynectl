@@ -48,7 +48,7 @@ Subcommands:
     status                   Get the status of an app
     logs                     Get the logs of an app (NOT YET IMPLEMENTED)
     console                  Open app console (NOT YET IMPLEMENTED)
-    config                   Edit/view/reload Octyne's config (`help config` for more info) (NOT YET IMPLEMENTED)
+    config                   Edit/view/reload Octyne's config (`help config` for more info)
     account(s), user(s)      Manage Octyne accounts (`help accounts` for more info)
     help                     Print this help message and exit
 ";

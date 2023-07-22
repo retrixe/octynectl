@@ -48,7 +48,29 @@ async fn main() {
                     "status" | "info" => crate::commands::status::status_cmd_help(),
                     "logs" => println!("Not implemented yet!"), // TODO
                     "console" => println!("Not implemented yet!"), // TODO
-                    "config" => println!("Not implemented yet!"), // TODO
+                    "config" => {
+                        if args.len() == 2 {
+                            crate::commands::config::config_cmd_help();
+                        } else if args.len() == 3 {
+                            if args[2] == "view" || args[2] == "show" {
+                                crate::commands::config::config_view_cmd_help();
+                            } else if args[2] == "edit" || args[2] == "modify" {
+                                crate::commands::config::config_edit_cmd_help();
+                            } else if args[2] == "reload" {
+                                crate::commands::config::config_reload_cmd_help();
+                            } else {
+                                println!(
+                                    "{}",
+                                    help::invalid_usage_str(
+                                        help::unknown_subcommand_str(
+                                            subcommand.to_owned() + " " + &args[2]
+                                        ),
+                                        args[1].clone()
+                                    )
+                                );
+                            }
+                        } // else {} // See above comment
+                    }
                     "account" | "accounts" => {
                         if args.len() == 2 {
                             crate::commands::accounts::accounts_cmd_help();
@@ -72,7 +94,7 @@ async fn main() {
                                     )
                                 );
                             }
-                        } // TODO: else {}
+                        } // else {} // See above comment
                     }
                     _ => {
                         println!(
@@ -96,7 +118,7 @@ async fn main() {
         "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
         "logs" => println!("Not implemented yet."), // TODO
         "console" => println!("Not implemented yet."), // TODO
-        "config" => println!("Not implemented yet!"), // TODO
+        "config" => crate::commands::config::config_cmd(args, top_level_opts).await,
         "account" | "accounts" => {
             crate::commands::accounts::accounts_cmd(args, top_level_opts).await
         }
