@@ -18,6 +18,8 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
             crate::help::invalid_usage(crate::help::INCORRECT_USAGE, "accounts")
         );
         exit(1);
+    } else if args.len() == 1 {
+        accounts_cmd_help();
     } else if args[1] == "list" || args[1] == "show" {
         if top_level_opts.contains_key("h")
             || top_level_opts.contains_key("help")
