@@ -17,7 +17,7 @@ struct Response {
 #[serde(rename_all = "camelCase")]
 pub struct ServerExtraInfo {
     #[serde(default)]
-    pub online: i64,
+    pub status: i64,
     #[serde(default)]
     pub to_delete: bool,
 }

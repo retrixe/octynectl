@@ -50,9 +50,9 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         println!("name,status,toDelete");
         for server in servers {
             let (name, status_value) = server;
-            let status = parse_status_value(status_value);
-            let online_status = status_to_text(status.online).to_lowercase();
-            println!("{},{},{}", name, online_status, status.to_delete);
+            let server_info = parse_server_info(status_value);
+            let status = status_to_text(server_info.status).to_lowercase();
+            println!("{},{},{}", name, status, server_info.to_delete);
         }
         return;
     }
@@ -65,10 +65,10 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     println!("Apps running under the local Octyne instance:\n");
     let longest_name = servers.keys().map(|s| s.len()).max().unwrap_or(0);
     for server in servers {
-        let (name, status_value) = server;
-        let status = parse_status_value(status_value);
-        let mut info = status_to_text(status.online);
-        if status.to_delete {
+        let (name, server_info_value) = server;
+        let server_info = parse_server_info(server_info_value);
+        let mut info = status_to_text(server_info.status);
+        if server_info.to_delete {
             info += " (marked for deletion)";
         }
 
@@ -76,14 +76,14 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     }
 }
 
-fn parse_status_value(status_value: Value) -> ServerExtraInfo {
-    match status_value.as_i64() {
+fn parse_server_info(server_info_value: Value) -> ServerExtraInfo {
+    match server_info_value.as_i64() {
         Some(status) => ServerExtraInfo {
-            online: status,
+            status: status,
             to_delete: false,
         },
-        None => serde_json::from_value(status_value).unwrap_or(ServerExtraInfo {
-            online: -1,
+        None => serde_json::from_value(server_info_value).unwrap_or(ServerExtraInfo {
+            status: -1,
             to_delete: false,
         }),
     }
