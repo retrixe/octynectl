@@ -81,6 +81,8 @@ async fn main() {
                                 crate::commands::accounts::accounts_create_cmd_help();
                             } else if args[2] == "delete" || args[2] == "remove" {
                                 crate::commands::accounts::accounts_delete_cmd_help();
+                            } else if args[2] == "rename" {
+                                crate::commands::accounts::accounts_rename_cmd_help();
                             } else if args[2] == "passwd" {
                                 crate::commands::accounts::accounts_passwd_cmd_help();
                             } else {

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, process::exit};
 
-use crate::api::accounts::{create_account, delete_account, get_accounts, patch_account};
+use crate::api::accounts::{delete_account, get_accounts, patch_account, post_account};
 
 pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
@@ -85,13 +85,35 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
                 exit(1);
             }
         };
-        create_account(args[2].to_owned(), pass)
+        post_account(args[2].to_owned(), pass)
             .await
             .unwrap_or_else(|e| {
                 println!("Error: {}", e);
                 exit(1);
             });
         println!("Successfully created account {}", args[2]);
+    } else if args[1] == "rename" {
+        if top_level_opts.contains_key("h")
+            || top_level_opts.contains_key("help")
+            || opts.contains_key("h")
+            || opts.contains_key("help")
+        {
+            accounts_rename_cmd_help();
+            return;
+        } else if args.len() != 4 {
+            println!(
+                "{}",
+                crate::help::invalid_usage(crate::help::INCORRECT_USAGE, "accounts rename")
+            );
+            exit(1);
+        }
+        patch_account(Some(args[2].to_owned()), args[3].to_owned(), "".to_owned())
+            .await
+            .unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            });
+        println!("Successfully renamed account {} to {}", args[2], args[3]);
     } else if args[1] == "delete" || args[1] == "remove" {
         if top_level_opts.contains_key("h")
             || top_level_opts.contains_key("help")
@@ -158,7 +180,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
                 exit(1);
             }
         };
-        patch_account(args[2].to_owned(), pass)
+        patch_account(None, args[2].to_owned(), pass)
             .await
             .unwrap_or_else(|e| {
                 println!("Error: {}", e);
@@ -185,6 +207,7 @@ Aliases: account, users, user
 Subcommands:
     list, show           List all accounts
     create, add          Create a new account
+    rename               Rename an existing account
     delete, remove       Delete accounts
     passwd               Change password of an existing account
 
@@ -213,6 +236,17 @@ pub fn accounts_create_cmd_help() {
 Usage: octynectl accounts create [OPTIONS] [USERNAME]
 
 Aliases: add
+
+Options:
+    -h, --help           Print help information"
+    );
+}
+
+pub fn accounts_rename_cmd_help() {
+    println!(
+        "Rename an existing Octyne account.
+
+Usage: octynectl accounts rename [OPTIONS] [OLD USERNAME] [NEW USERNAME]
 
 Options:
     -h, --help           Print help information"

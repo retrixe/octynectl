@@ -48,8 +48,8 @@ pub async fn get_accounts() -> Result<Vec<String>, String> {
     }
 }
 
-pub async fn create_account(username: String, password: String) -> Result<(), String> {
-    match post_account(username, password, Method::POST).await {
+pub async fn post_account(username: String, password: String) -> Result<(), String> {
+    match post_patch_account(None, username, password, Method::POST).await {
         Ok(ok) => {
             if !ok {
                 return Err("Octyne failed to create the account!".to_owned());
@@ -60,11 +60,15 @@ pub async fn create_account(username: String, password: String) -> Result<(), St
     }
 }
 
-pub async fn patch_account(username: String, password: String) -> Result<(), String> {
-    match post_account(username, password, Method::PATCH).await {
+pub async fn patch_account(
+    old_user: Option<String>,
+    username: String,
+    password: String,
+) -> Result<(), String> {
+    match post_patch_account(old_user, username, password, Method::PATCH).await {
         Ok(ok) => {
             if !ok {
-                return Err("Octyne failed to change the account password!".to_owned());
+                return Err("Octyne failed to modify the account!".to_owned());
             }
             Ok(())
         }
@@ -75,15 +79,24 @@ pub async fn patch_account(username: String, password: String) -> Result<(), Str
 #[derive(Serialize, Debug)]
 struct PostAccountRequest {
     username: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     password: String,
 }
 
-async fn post_account(username: String, password: String, method: Method) -> Result<bool, String> {
+async fn post_patch_account(
+    old_user: Option<String>,
+    username: String,
+    password: String,
+    method: Method,
+) -> Result<bool, String> {
     let body = serde_json::to_string(&PostAccountRequest { username, password });
     if body.is_err() {
         return Err(body.unwrap_err().to_string());
     }
-    let endpoint = "/accounts".to_string();
+    let mut endpoint = "/accounts".to_string();
+    if old_user.is_some() {
+        endpoint = format!("/accounts?username={}", old_user.unwrap());
+    }
     let client = Client::unix();
     let req = Request::builder()
         .method(method)
