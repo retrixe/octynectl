@@ -46,7 +46,7 @@ async fn main() {
                     "kill" => crate::commands::kill::kill_cmd_help(),
                     "restart" => crate::commands::restart::restart_cmd_help(),
                     "status" | "info" => crate::commands::status::status_cmd_help(),
-                    "logs" => println!("Not implemented yet!"), // TODO
+                    "logs" => crate::commands::logs::logs_cmd_help(),
                     "console" => println!("Not implemented yet!"), // TODO
                     "config" => {
                         if args.len() == 2 {
@@ -118,7 +118,7 @@ async fn main() {
         "kill" => crate::commands::kill::kill_cmd(args, top_level_opts).await,
         "restart" => crate::commands::restart::restart_cmd(args, top_level_opts).await,
         "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
-        "logs" => println!("Not implemented yet."), // TODO
+        "logs" => crate::commands::logs::logs_cmd(args, top_level_opts).await,
         "console" => println!("Not implemented yet."), // TODO
         "config" => crate::commands::config::config_cmd(args, top_level_opts).await,
         "account" | "accounts" => {
