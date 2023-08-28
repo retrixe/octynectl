@@ -30,19 +30,32 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-# TODO: Actually build with this: https://blog.logrocket.com/guide-cross-compilation-rust/
-#    - if: ${{ matrix.os == 'windows-latest' }}
-#      run: rustup target add aarch64-pc-windows-msvc
-#    - if: ${{ matrix.os == 'macos-12' }}
-#      run: rustup target add aarch64-apple-darwin
-#    - if: ${{ matrix.os == 'ubuntu-20.04' }}
-#      run: |
-#        rustup target add aarch64-unknown-linux-gnu
-#        rustup target add arm-unknown-linux-gnueabihf
+    # setup cross-compilation (https://blog.logrocket.com/guide-cross-compilation-rust/)
+    - run: cargo install cross
+    - if: ${{ matrix.os == 'windows-latest' }}
+      run: rustup target add aarch64-pc-windows-msvc
+    - if: ${{ matrix.os == 'macos-12' }}
+      run: rustup target add aarch64-apple-darwin
+    - if: ${{ matrix.os == 'ubuntu-20.04' }}
+      run: |
+        rustup target add aarch64-unknown-linux-gnu
+        rustup target add arm-unknown-linux-gnueabihf
 
     - uses: Swatinem/rust-cache@v2
     - name: Build
       run: cargo build --verbose --release
+    - name: Build for Linux ARMv8
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      run: cross build --verbose --release --target aarch64-unknown-linux-gnu
+    - name: Build for Linux ARMv6
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      run: cross build --verbose --release --target arm-unknown-linux-gnueabihf
+    - name: Build for Windows ARMv8
+      if: ${{ matrix.os == 'windows-latest' }}
+      run: cross build --verbose --release --target aarch64-pc-windows-msvc
+    - name: Build for macOS ARMv8
+      if: ${{ matrix.os == 'macos-12' }}
+      run: cross build --verbose --release --target aarch64-apple-darwin
     - name: Run tests
       run: cargo test --verbose
     - name: Upload binaries
@@ -51,4 +64,28 @@ jobs:
       with:
         name: octynectl-${{ matrix.os }}
         path: target/release/octynectl${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+    - name: Upload binaries for Linux ARMv8
+      uses: actions/upload-artifact@v3
+      if: ${{ success() && matrix.os == 'ubuntu-20.04' }}
+      with:
+        name: octynectl-linux-armv8
+        path: target/aarch64-unknown-linux-gnu/release/octynectl
+    - name: Upload binaries for Linux ARMv6
+      uses: actions/upload-artifact@v3
+      if: ${{ success() && matrix.os == 'ubuntu-20.04' }}
+      with:
+        name: octynectl-linux-armv6
+        path: target/arm-unknown-linux-gnueabihf/release/octynectl
+    - name: Upload binaries for Windows ARMv8
+      uses: actions/upload-artifact@v3
+      if: ${{ success() && matrix.os == 'windows-latest' }}
+      with:
+        name: octynectl-windows-armv8
+        path: target/aarch64-pc-windows-msvc/release/octynectl.exe
+    - name: Upload binaries for macOS ARMv8
+      uses: actions/upload-artifact@v3
+      if: ${{ success() && matrix.os == 'macos-12' }}
+      with:
+        name: octynectl-macos-armv8
+        path: target/aarch64-apple-darwin/release/octynectl
     # TODO: rustfmt check?
