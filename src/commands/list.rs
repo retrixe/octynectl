@@ -4,7 +4,6 @@ use serde_json::Value;
 
 use crate::api::servers::ServerExtraInfo;
 
-// TODO: add --filter=glob
 pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -79,7 +78,7 @@ pub async fn list_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 fn parse_server_info(server_info_value: Value) -> ServerExtraInfo {
     match server_info_value.as_i64() {
         Some(status) => ServerExtraInfo {
-            status: status,
+            status,
             to_delete: false,
         },
         None => serde_json::from_value(server_info_value).unwrap_or(ServerExtraInfo {
