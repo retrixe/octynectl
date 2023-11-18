@@ -90,8 +90,8 @@ async fn post_patch_account(
     method: Method,
 ) -> Result<bool, String> {
     let body = serde_json::to_string(&PostAccountRequest { username, password });
-    if body.is_err() {
-        return Err(body.unwrap_err().to_string());
+    if let Err(err) = body {
+        return Err(err.to_string());
     }
     let mut endpoint = "/accounts".to_string();
     if old_user.is_some() {
