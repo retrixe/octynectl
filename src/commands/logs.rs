@@ -62,7 +62,7 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         exit(1);
     });
     #[cfg(target_family = "windows")]
-    let (socket, response) = client(
+    let (mut socket, response) = client(
         format!("ws://localhost:42069/server/{}/console", args[1]).as_str(),
         stream,
     )
