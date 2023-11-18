@@ -1,23 +1,21 @@
-#[cfg(target_family = "windows")]
 use std::fmt::Write;
 use std::{collections::HashMap, env, process::exit};
 
-use crate::{api::common::ErrorResponse, utils::misc::default_octyne_path};
+use crate::api::server::connect_to_server_console;
 #[cfg(target_family = "unix")]
 use futures_util::StreamExt;
-#[cfg(target_family = "windows")]
-use minus::Pager;
+use minus::MinusError;
 #[cfg(target_family = "unix")]
 use pager::Pager;
-#[cfg(target_family = "unix")]
-use tokio::net::UnixStream;
-#[cfg(target_family = "unix")]
-use tokio_tungstenite::client_async;
-#[cfg(target_family = "windows")]
-use tokio_tungstenite::tungstenite::client;
 use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
-#[cfg(target_family = "windows")]
-use uds_windows::UnixStream;
+
+fn minus_page_lines(lines: &str) -> Result<(), MinusError> {
+    let mut output = minus::Pager::new();
+    output.set_run_no_overflow(true)?;
+    writeln!(output, "{}", lines)?;
+    minus::page_all(output)?;
+    Ok(())
+}
 
 pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
@@ -37,57 +35,17 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         exit(1);
     }
     let no_pager = opts.contains_key("no-pager") || env::var("NOPAGER").eq(&Ok("true".to_string()));
+    let use_minus =
+        opts.contains_key("use-builtin-pager") || env::var("PAGER").eq(&Ok(String::new()));
 
     // Connect to WebSocket over Unix socket
-    #[cfg(target_family = "unix")]
-    let stream = UnixStream::connect(default_octyne_path())
+    #[allow(unused_mut)] // Windows needs this.
+    let mut socket = connect_to_server_console(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
             exit(1);
         });
-    #[cfg(target_family = "unix")]
-    let (socket, response) = client_async(
-        format!("ws://localhost:42069/server/{}/console", args[1]).as_str(),
-        stream,
-    )
-    .await
-    .unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    });
-    #[cfg(target_family = "windows")]
-    let stream = UnixStream::connect(default_octyne_path()).unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    });
-    #[cfg(target_family = "windows")]
-    let (mut socket, response) = client(
-        format!("ws://localhost:42069/server/{}/console", args[1]).as_str(),
-        stream,
-    )
-    .unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    });
-
-    // If the server refused to upgrade to WebSocket
-    if response.status() != 101 {
-        let error: String = response.body().as_ref().map_or("".to_string(), |body| {
-            return " ".to_string()
-                + &serde_json::from_slice(body.as_slice())
-                    .unwrap_or(ErrorResponse {
-                        error: "".to_string(),
-                    })
-                    .error;
-        });
-        println!(
-            "Error: Received status code {} from Octyne!{}",
-            response.status(),
-            error
-        );
-        exit(1);
-    }
 
     // Split the socket and then read a single message from it
     #[cfg(target_family = "unix")]
@@ -103,11 +61,11 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     let item = item.unwrap();
     #[cfg(target_family = "windows")]
     let item = socket.read();
-    if item.is_err() {
-        println!("Error: {}", item.err().unwrap());
+    // Everything here onwards is OS-independent.
+    let item = item.unwrap_or_else(|e| {
+        println!("Error: {}", e);
         exit(1);
-    }
-    let item = item.unwrap();
+    });
     if item.is_close() {
         println!("Error: Received close message from Octyne!");
         exit(1);
@@ -145,26 +103,18 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 
     // Log the output.
     if no_pager {
+        return println!("{}", item);
+    } else if use_minus || cfg!(target_family = "windows") {
+        return minus_page_lines(item).unwrap_or_else(|e| {
+            println!("Error: {}", e);
+            exit(1);
+        });
+    }
+    #[cfg(target_family = "unix")]
+    {
+        Pager::with_default_pager("less").setup();
         println!("{}", item);
-    } else {
-        #[cfg(target_family = "unix")]
-        {
-            Pager::with_default_pager("less").setup();
-            println!("{}", item);
-            exit(0);
-        }
-        #[cfg(target_family = "windows")]
-        {
-            let mut output = Pager::new();
-            writeln!(output, "{}", item).unwrap_or_else(|e| {
-                println!("Error: {}", e);
-                exit(1);
-            });
-            minus::page_all(output).unwrap_or_else(|e| {
-                println!("Error: {}", e);
-                exit(1);
-            });
-        }
+        exit(0);
     }
 }
 
@@ -172,10 +122,19 @@ pub fn logs_cmd_help() {
     println!(
         "Get the output logs of an app.
 
+If $PAGER is set, it will be used to display the logs, else, less will be used.
+On Windows, a built-in pager library will be used, even if $PAGER is set. You
+can use it on Unix-like systems too (e.g. Linux, macOS) by passing the
+`--use-builtin-pager` flag, or setting the $PAGER env variable to empty string.
+
+The pager can be disabled entirely by setting the $NOPAGER environment variable
+to `true`, or by using the `--no-pager` flag.
+
 Usage: octynectl logs [OPTIONS] [APP NAME]
 
 Options:
     -h, --help               Print help information
-    --no-pager               Don't use a pager to display logs"
+    --no-pager               Don't use a pager to display logs
+    --use-builtin-pager      Use the built-in pager to display logs"
     );
 }

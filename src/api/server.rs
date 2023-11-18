@@ -1,8 +1,16 @@
 use hyper::{Body, Client, Method, Request};
 use hyperlocal_with_windows::{UnixClientExt, Uri};
 use serde::Deserialize;
+#[cfg(target_family = "unix")]
+use tokio::net::UnixStream;
+#[cfg(target_family = "windows")]
+use tokio_tungstenite::tungstenite::{client, WebSocket};
+#[cfg(target_family = "unix")]
+use tokio_tungstenite::{client_async, WebSocketStream};
+#[cfg(target_family = "windows")]
+use uds_windows::UnixStream;
 
-use crate::utils::misc;
+use crate::{api::common::ErrorResponse, utils::misc};
 
 use super::common::ActionResponse;
 
@@ -95,4 +103,58 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
         return Err(json.error);
     }
     Ok(json)
+}
+
+#[cfg(target_family = "unix")]
+pub async fn connect_to_server_console(
+    server_name: String,
+) -> Result<WebSocketStream<UnixStream>, String> {
+    // Connect to WebSocket over Unix socket
+    let stream = UnixStream::connect(misc::default_octyne_path())
+        .await
+        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
+    let (socket, response) = client_async(
+        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
+        stream,
+    )
+    .await
+    .map_err(|e| format!("Error connecting to WebSocket! {}", e))?;
+
+    // If the server refused to upgrade to WebSocket
+    check_websocket_conn_response(response)?;
+    Ok(socket)
+}
+
+#[cfg(target_family = "windows")]
+pub async fn connect_to_server_console(
+    server_name: String,
+) -> Result<WebSocket<UnixStream>, String> {
+    // Connect to WebSocket over Unix socket
+    let stream = UnixStream::connect(misc::default_octyne_path())
+        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
+    let (socket, response) = client(
+        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
+        stream,
+    )
+    .map_err(|e| format!("Error connecting to WebSocket! {}", e))?;
+
+    // If the server refused to upgrade to WebSocket
+    check_websocket_conn_response(response)?;
+    Ok(socket)
+}
+
+fn check_websocket_conn_response(response: hyper::Response<Option<Vec<u8>>>) -> Result<(), String> {
+    if response.status() != 101 {
+        return Err(format!(
+            "Error: Received status code {} from Octyne!{}",
+            response.status(),
+            response.body().as_ref().map_or("".to_string(), |body| {
+                " Reason: ".to_string()
+                    + &serde_json::from_slice(body.as_slice())
+                        .map(|json: ErrorResponse| json.error)
+                        .unwrap_or("N/A".to_string())
+            })
+        ));
+    }
+    Ok(())
 }
