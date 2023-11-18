@@ -1,8 +1,13 @@
+#[cfg(target_family = "windows")]
+use std::fmt::Write;
 use std::{collections::HashMap, env, process::exit};
 
 use crate::{api::common::ErrorResponse, utils::misc::default_octyne_path};
 #[cfg(target_family = "unix")]
 use futures_util::StreamExt;
+#[cfg(target_family = "windows")]
+use minus::Pager;
+#[cfg(target_family = "unix")]
 use pager::Pager;
 #[cfg(target_family = "unix")]
 use tokio::net::UnixStream;
@@ -142,9 +147,24 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     if no_pager {
         println!("{}", item);
     } else {
-        Pager::with_default_pager("less").setup();
-        println!("{}", item);
-        exit(0);
+        #[cfg(target_family = "unix")]
+        {
+            Pager::with_default_pager("less").setup();
+            println!("{}", item);
+            exit(0);
+        }
+        #[cfg(target_family = "windows")]
+        {
+            let mut output = Pager::new();
+            writeln!(output, "{}", item).unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            });
+            minus::page_all(output).unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            });
+        }
     }
 }
 

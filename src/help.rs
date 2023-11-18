@@ -2,6 +2,8 @@ pub const USAGE: &str = "{0}, run `octynectl help{1}` for more information.";
 
 pub const INCORRECT_USAGE: &str = "Incorrect usage";
 
+pub const TOO_MANY_ARGS: &str = "Too many arguments";
+
 const UNKNOWN_SUBCOMMAND: &str = "Unknown subcommand";
 
 pub fn unknown_subcommand(subcommand: &str) -> String {
@@ -26,6 +28,13 @@ pub fn invalid_usage_str(msg: String, subcommand: String) -> String {
     USAGE
         .replace("{0}", &msg)
         .replace("{1}", (" ".to_owned() + &subcommand).as_str())
+}
+
+pub fn log_too_many_args(subcommand: String) {
+    println!(
+        "{}",
+        invalid_usage_str(TOO_MANY_ARGS.to_string(), subcommand)
+    );
 }
 
 // TODO: eventually have `nodes` and --node=NAME

@@ -7,6 +7,7 @@ mod utils;
 
 // TODO: we need man pages down the line
 // TODO: the opt parser is primitive, only allow certain opts to be parsed, add strings to opt
+// FIXME: error handling is a bit aggressive, use ?
 #[tokio::main]
 async fn main() {
     let mut args = std::env::args().collect::<Vec<String>>();
@@ -40,13 +41,48 @@ async fn main() {
                 let subcommand = subcommand_tmp.as_str();
                 // FIXME: Everything except config/accounts should be limited to 1 param only!
                 match subcommand {
-                    "list" | "list-apps" | "apps" => crate::commands::list::list_cmd_help(),
-                    "start" => crate::commands::start::start_cmd_help(),
-                    "stop" => crate::commands::stop::stop_cmd_help(),
-                    "kill" => crate::commands::kill::kill_cmd_help(),
-                    "restart" => crate::commands::restart::restart_cmd_help(),
-                    "status" | "info" => crate::commands::status::status_cmd_help(),
-                    "logs" => crate::commands::logs::logs_cmd_help(),
+                    "list" | "list-apps" | "apps" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::list::list_cmd_help()
+                    }
+                    "start" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::start::start_cmd_help()
+                    }
+                    "stop" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::stop::stop_cmd_help()
+                    }
+                    "kill" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::kill::kill_cmd_help()
+                    }
+                    "restart" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::restart::restart_cmd_help()
+                    }
+                    "status" | "info" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::status::status_cmd_help()
+                    }
+                    "logs" => {
+                        if args.len() != 2 {
+                            return help::log_too_many_args(args[1].clone());
+                        }
+                        crate::commands::logs::logs_cmd_help()
+                    }
                     "console" => println!("Not implemented yet!"), // FIXME
                     "config" => {
                         if args.len() == 2 {
@@ -69,7 +105,9 @@ async fn main() {
                                     )
                                 );
                             }
-                        } // else {} // FIXME: See above comment
+                        } else {
+                            help::log_too_many_args(args[1].clone());
+                        }
                     }
                     "account" | "accounts" => {
                         if args.len() == 2 {
@@ -96,7 +134,9 @@ async fn main() {
                                     )
                                 );
                             }
-                        } // else {} // FIXME: See above comment
+                        } else {
+                            help::log_too_many_args(args[1].clone());
+                        }
                     }
                     _ => {
                         println!(

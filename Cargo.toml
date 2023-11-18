@@ -9,6 +9,7 @@ edition = "2021"
 futures-util = "0.3.28"
 hyper = { version = "0.14", features = ["full"] }
 hyperlocal-with-windows = { version = "0.8.2", features = ["client"] }
+minus = { version = "5.4.2", features = ["search", "static_output"] }
 pager = "0.16.1"
 pathsearch = "0.2.0"
 rpassword = "7.2"
