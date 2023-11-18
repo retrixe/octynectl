@@ -28,12 +28,7 @@ pub async fn post_server(server_name: String, action: PostServerAction) -> Resul
         .body(Body::from(action.to_string().to_uppercase()))
         .expect("request builder");
     let response = client.request(req).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
@@ -82,12 +77,7 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     let client = Client::unix();
     let uri = Uri::new(misc::default_octyne_path(), endpoint.as_str()).into();
     let response = client.get(uri).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: GetServerResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,

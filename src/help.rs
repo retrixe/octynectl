@@ -1,3 +1,5 @@
+use std::process::exit;
+
 pub const USAGE: &str = "{0}, run `octynectl help{1}` for more information.";
 
 pub const INCORRECT_USAGE: &str = "Incorrect usage";
@@ -61,3 +63,102 @@ Subcommands:
     account(s), user(s)      Manage Octyne accounts (`help accounts` for more info)
     help                     Print this help message and exit
 ";
+
+pub fn help_cmd(args: Vec<String>) {
+    if args.len() > 1 {
+        let subcommand_tmp = args[1].clone();
+        let subcommand = subcommand_tmp.as_str();
+        let first_level = vec![
+            (
+                "list,list-apps,apps",
+                crate::commands::list::list_cmd_help as fn(),
+            ),
+            ("start", crate::commands::start::start_cmd_help as fn()),
+            ("stop", crate::commands::stop::stop_cmd_help as fn()),
+            ("kill", crate::commands::kill::kill_cmd_help as fn()),
+            (
+                "restart",
+                crate::commands::restart::restart_cmd_help as fn(),
+            ),
+            (
+                "status,info",
+                crate::commands::status::status_cmd_help as fn(),
+            ),
+            ("logs", crate::commands::logs::logs_cmd_help as fn()),
+            // FIXME: ("console", crate::commands::console::console_cmd_help),
+            ("config", crate::commands::config::config_cmd_help as fn()),
+            (
+                "account,accounts",
+                crate::commands::accounts::accounts_cmd_help as fn(),
+            ),
+        ];
+        if args.len() == 2 {
+            for (aliases, help) in first_level.iter() {
+                for alias in aliases.split(',') {
+                    if subcommand == alias {
+                        return help();
+                    }
+                }
+            }
+            println!(
+                "{}",
+                invalid_usage(unknown_subcommand(subcommand).as_str(), "")
+            );
+            exit(1);
+        }
+        // For subsequent levels, we will still rely on custom logic for now.
+        match subcommand {
+            "config" => {
+                if args.len() > 3 {
+                    log_too_many_args(args[1].clone());
+                } else if args[2] == "view" || args[2] == "show" {
+                    crate::commands::config::config_view_cmd_help();
+                } else if args[2] == "edit" || args[2] == "modify" {
+                    crate::commands::config::config_edit_cmd_help();
+                } else if args[2] == "reload" {
+                    crate::commands::config::config_reload_cmd_help();
+                } else {
+                    println!(
+                        "{}",
+                        invalid_usage_str(
+                            unknown_subcommand_str(subcommand.to_owned() + " " + &args[2]),
+                            args[1].clone()
+                        )
+                    );
+                }
+            }
+            "account" | "accounts" => {
+                if args.len() > 3 {
+                    log_too_many_args(args[1].clone());
+                } else if args[2] == "list" || args[2] == "show" {
+                    crate::commands::accounts::accounts_list_cmd_help();
+                } else if args[2] == "create" || args[2] == "add" {
+                    crate::commands::accounts::accounts_create_cmd_help();
+                } else if args[2] == "delete" || args[2] == "remove" {
+                    crate::commands::accounts::accounts_delete_cmd_help();
+                } else if args[2] == "rename" {
+                    crate::commands::accounts::accounts_rename_cmd_help();
+                } else if args[2] == "passwd" {
+                    crate::commands::accounts::accounts_passwd_cmd_help();
+                } else {
+                    println!(
+                        "{}",
+                        invalid_usage_str(
+                            unknown_subcommand_str(subcommand.to_owned() + " " + &args[2]),
+                            args[1].clone()
+                        )
+                    );
+                }
+            }
+            _ => {
+                println!(
+                    "{}",
+                    invalid_usage(unknown_subcommand(subcommand).as_str(), "")
+                );
+                exit(1);
+            }
+        }
+        return;
+    }
+    println!("{}", HELP_STR)
+}

@@ -11,12 +11,7 @@ pub async fn get_accounts() -> Result<Vec<String>, String> {
     let client = Client::unix();
     let uri = Uri::new(misc::default_octyne_path(), "/accounts").into();
     let response = client.get(uri).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: Value = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
@@ -49,15 +44,11 @@ pub async fn get_accounts() -> Result<Vec<String>, String> {
 }
 
 pub async fn post_account(username: String, password: String) -> Result<(), String> {
-    match post_patch_account(None, username, password, Method::POST).await {
-        Ok(ok) => {
-            if !ok {
-                return Err("Octyne failed to create the account!".to_owned());
-            }
-            Ok(())
-        }
-        Err(err) => Err(err),
+    let ok = post_patch_account(None, username, password, Method::POST).await?;
+    if !ok {
+        return Err("Octyne failed to create the account!".to_owned());
     }
+    Ok(())
 }
 
 pub async fn patch_account(
@@ -65,15 +56,11 @@ pub async fn patch_account(
     username: String,
     password: String,
 ) -> Result<(), String> {
-    match post_patch_account(old_user, username, password, Method::PATCH).await {
-        Ok(ok) => {
-            if !ok {
-                return Err("Octyne failed to modify the account!".to_owned());
-            }
-            Ok(())
-        }
-        Err(err) => Err(err),
+    let ok = post_patch_account(old_user, username, password, Method::PATCH).await?;
+    if !ok {
+        return Err("Octyne failed to modify the account!".to_owned());
     }
+    Ok(())
 }
 
 #[derive(Serialize, Debug)]
@@ -104,12 +91,7 @@ async fn post_patch_account(
         .body(Body::from(body.unwrap()))
         .expect("request builder");
     let response = client.request(req).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
@@ -138,12 +120,7 @@ pub async fn delete_account(username: String) -> Result<(), String> {
         .body(Body::empty())
         .expect("request builder");
     let response = client.request(req).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,

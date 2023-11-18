@@ -31,10 +31,7 @@ pub async fn get_servers(extra_info: bool) -> Result<Map<String, Value>, String>
     let url = Uri::new(misc::default_octyne_path(), endpoint).into();
     let client = Client::unix();
     let response = client.get(url).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => return Err(e),
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: Response = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
@@ -44,11 +41,10 @@ pub async fn get_servers(extra_info: bool) -> Result<Map<String, Value>, String>
     if !json.error.is_empty() {
         return Err(json.error);
     } else if res.status() != 200 {
-        let default = format!(
+        return Err(format!(
             "Error: Received status code {} from Octyne!",
             res.status().as_str()
-        );
-        return Err(default);
+        ));
     }
     Ok(json.servers)
 }

@@ -9,10 +9,7 @@ pub async fn get_config() -> Result<String, String> {
     let url = Uri::new(misc::default_octyne_path(), "/config").into();
     let client = Client::unix();
     let response = client.get(url).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => return Err(e),
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ErrorResponse = serde_json::from_str(body.trim()).unwrap_or(ErrorResponse {
         error: "".to_string(),
@@ -34,10 +31,7 @@ pub async fn get_config_reload() -> Result<(), String> {
     let url = Uri::new(misc::default_octyne_path(), "/config/reload").into();
     let client = Client::unix();
     let response = client.get(url).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => return Err(e),
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,
@@ -66,10 +60,7 @@ pub async fn patch_config(new_config: String) -> Result<(), String> {
         .body(Body::from(new_config))
         .expect("Failed to build request!");
     let response = client.request(req).await;
-    let (res, body) = match crate::utils::request::read_str(response).await {
-        Ok((res, body)) => (res, body),
-        Err(e) => return Err(e),
-    };
+    let (res, body) = crate::utils::request::read_str(response).await?;
 
     let json: ActionResponse = match serde_json::from_str(body.trim()) {
         Ok(json) => json,

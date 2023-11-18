@@ -2,24 +2,14 @@ use hyper::{body::HttpBody, Body, Error, Response};
 
 pub async fn read_data(
     response: Result<Response<Body>, Error>,
-) -> Result<(Response<Body>, Vec<u8>), String> {
-    match response {
-        Ok(mut response) => {
-            let mut bytes: Vec<u8> = Vec::new();
-            while let Some(next) = response.data().await {
-                match next {
-                    Ok(chunk) => {
-                        bytes.extend_from_slice(&chunk);
-                    }
-                    Err(e) => {
-                        return Err(format!("Failed to read from Octyne socket! {}", e));
-                    }
-                }
-            }
-            Ok((response, bytes))
-        }
-        Err(e) => Err(format!("Failed to read response from Octyne socket! {}", e)),
+) -> Result<(Response<Body>, Vec<u8>), Error> {
+    let mut response = response?;
+    let mut bytes: Vec<u8> = Vec::new();
+    while let Some(next) = response.data().await {
+        let chunk = next?;
+        bytes.extend_from_slice(&chunk);
     }
+    Ok((response, bytes))
 }
 
 pub async fn read_str(
@@ -30,6 +20,6 @@ pub async fn read_str(
             Ok(parsed) => Ok((res, parsed)),
             Err(e) => Err(format!("Received corrupt response from Octyne! {}", e)),
         },
-        Err(e) => Err(e),
+        Err(e) => Err(format!("Failed to read response from Octyne! {}", e)),
     }
 }
