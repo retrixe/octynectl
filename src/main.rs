@@ -38,7 +38,7 @@ async fn main() {
             if args.len() > 1 {
                 let subcommand_tmp = args[1].clone();
                 let subcommand = subcommand_tmp.as_str();
-                // TODO: Everything except config/accounts should be limited to 1 param only!
+                // FIXME: Everything except config/accounts should be limited to 1 param only!
                 match subcommand {
                     "list" | "list-apps" | "apps" => crate::commands::list::list_cmd_help(),
                     "start" => crate::commands::start::start_cmd_help(),
@@ -47,7 +47,7 @@ async fn main() {
                     "restart" => crate::commands::restart::restart_cmd_help(),
                     "status" | "info" => crate::commands::status::status_cmd_help(),
                     "logs" => crate::commands::logs::logs_cmd_help(),
-                    "console" => println!("Not implemented yet!"), // TODO
+                    "console" => println!("Not implemented yet!"), // FIXME
                     "config" => {
                         if args.len() == 2 {
                             crate::commands::config::config_cmd_help();
@@ -69,7 +69,7 @@ async fn main() {
                                     )
                                 );
                             }
-                        } // else {} // See above comment
+                        } // else {} // FIXME: See above comment
                     }
                     "account" | "accounts" => {
                         if args.len() == 2 {
@@ -96,7 +96,7 @@ async fn main() {
                                     )
                                 );
                             }
-                        } // else {} // See above comment
+                        } // else {} // FIXME: See above comment
                     }
                     _ => {
                         println!(
@@ -119,7 +119,7 @@ async fn main() {
         "restart" => crate::commands::restart::restart_cmd(args, top_level_opts).await,
         "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
         "logs" => crate::commands::logs::logs_cmd(args, top_level_opts).await,
-        "console" => println!("Not implemented yet."), // TODO
+        "console" => println!("Not implemented yet."), // FIXME
         "config" => crate::commands::config::config_cmd(args, top_level_opts).await,
         "account" | "accounts" => {
             crate::commands::accounts::accounts_cmd(args, top_level_opts).await

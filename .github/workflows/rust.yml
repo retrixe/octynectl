@@ -18,6 +18,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features
+      - name: Run Rustfmt
+        run: cargo fmt --all --check
 
   build:
 
@@ -63,4 +65,3 @@ jobs:
         path: |
           target/release/octynectl${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           target/*/release/octynectl${{ matrix.os == 'windows-latest' && '.exe' || '' }}
-    # TODO: rustfmt check?
