@@ -58,9 +58,9 @@ Subcommands:
     restart                  Restart an app
     status                   Get the status of an app
     logs                     Get the output logs of an app
-    console                  Open an app's console (NOT YET IMPLEMENTED)
-    config                   Edit/view/reload Octyne's config (`help config` for more info)
-    account(s), user(s)      Manage Octyne accounts (`help accounts` for more info)
+    console                  Interact with an app's console and send input
+    config                   Edit/view/reload Octyne's config (`help config`)
+    account(s), user(s)      Manage Octyne accounts (`help accounts`)
     help                     Print this help message and exit
 ";
 
@@ -68,28 +68,19 @@ pub fn help_cmd(args: Vec<String>) {
     if args.len() > 1 {
         let subcommand_tmp = args[1].clone();
         let subcommand = subcommand_tmp.as_str();
-        let first_level = vec![
-            (
-                "list,list-apps,apps",
-                crate::commands::list::list_cmd_help as fn(),
-            ),
-            ("start", crate::commands::start::start_cmd_help as fn()),
-            ("stop", crate::commands::stop::stop_cmd_help as fn()),
-            ("kill", crate::commands::kill::kill_cmd_help as fn()),
-            (
-                "restart",
-                crate::commands::restart::restart_cmd_help as fn(),
-            ),
-            (
-                "status,info",
-                crate::commands::status::status_cmd_help as fn(),
-            ),
-            ("logs", crate::commands::logs::logs_cmd_help as fn()),
-            // FIXME: ("console", crate::commands::console::console_cmd_help),
-            ("config", crate::commands::config::config_cmd_help as fn()),
+        let first_level: Vec<(&str, fn())> = vec![
+            ("list,list-apps,apps", crate::commands::list::list_cmd_help),
+            ("start", crate::commands::start::start_cmd_help),
+            ("stop", crate::commands::stop::stop_cmd_help),
+            ("kill", crate::commands::kill::kill_cmd_help),
+            ("restart", crate::commands::restart::restart_cmd_help),
+            ("status,info", crate::commands::status::status_cmd_help),
+            ("logs", crate::commands::logs::logs_cmd_help),
+            ("console", crate::commands::console::console_cmd_help),
+            ("config", crate::commands::config::config_cmd_help),
             (
                 "account,accounts",
-                crate::commands::accounts::accounts_cmd_help as fn(),
+                crate::commands::accounts::accounts_cmd_help,
             ),
         ];
         if args.len() == 2 {

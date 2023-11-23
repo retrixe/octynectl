@@ -44,7 +44,7 @@ async fn main() {
         "restart" => crate::commands::restart::restart_cmd(args, top_level_opts).await,
         "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
         "logs" => crate::commands::logs::logs_cmd(args, top_level_opts).await,
-        "console" => println!("Not implemented yet."), // FIXME
+        "console" => crate::commands::console::console_cmd(args, top_level_opts).await,
         "config" => crate::commands::config::config_cmd(args, top_level_opts).await,
         "account" | "accounts" => {
             crate::commands::accounts::accounts_cmd(args, top_level_opts).await
