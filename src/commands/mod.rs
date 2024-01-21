@@ -1,8 +1,10 @@
 pub mod accounts;
 pub mod config;
+#[cfg(target_family = "unix")]
 pub mod console;
 pub mod kill;
 pub mod list;
+#[cfg(target_family = "unix")]
 pub mod logs;
 pub mod restart;
 pub mod start;

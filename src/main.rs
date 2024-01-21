@@ -43,7 +43,9 @@ async fn main() {
         "kill" => crate::commands::kill::kill_cmd(args, top_level_opts).await,
         "restart" => crate::commands::restart::restart_cmd(args, top_level_opts).await,
         "status" | "info" => crate::commands::status::status_cmd(args, top_level_opts).await,
+        #[cfg(target_family = "unix")]
         "logs" => crate::commands::logs::logs_cmd(args, top_level_opts).await,
+        #[cfg(target_family = "unix")]
         "console" => crate::commands::console::console_cmd(args, top_level_opts).await,
         "config" => crate::commands::config::config_cmd(args, top_level_opts).await,
         "account" | "accounts" => {

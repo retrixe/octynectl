@@ -1,8 +1,10 @@
 use hyper::{Body, Client, Method, Request};
 use hyperlocal_with_windows::{UnixClientExt, Uri};
 use serde::Deserialize;
+#[cfg(target_family = "unix")]
 use tokio_tungstenite::{client_async, WebSocketStream};
 
+#[allow(unused_imports)]
 use crate::{api::common::ErrorResponse, utils::misc};
 
 use super::common::ActionResponse;
@@ -98,6 +100,7 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     Ok(json)
 }
 
+#[cfg(target_family = "unix")]
 pub async fn connect_to_server_console(
     server_name: String,
 ) -> Result<WebSocketStream<tokio::net::UnixStream>, String> {
@@ -123,6 +126,7 @@ pub async fn connect_to_server_console(
     Ok(socket)
 }
 
+#[cfg(target_family = "unix")]
 fn check_websocket_conn_response(response: hyper::Response<Option<Vec<u8>>>) -> Result<(), String> {
     if response.status() != 101 {
         return Err(format!(
