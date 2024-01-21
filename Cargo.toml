@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures-util = "0.3.28"
+futures-util = { version = "0.3.28", features = ["io"] }
 hyper = { version = "0.14", features = ["full"] }
 hyperlocal-with-windows = { version = "0.8.2", features = ["client"] }
 minus = { version = "5.4.2", features = ["search", "static_output"] }

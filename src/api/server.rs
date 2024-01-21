@@ -1,14 +1,7 @@
 use hyper::{Body, Client, Method, Request};
 use hyperlocal_with_windows::{UnixClientExt, Uri};
 use serde::Deserialize;
-#[cfg(target_family = "unix")]
-use tokio::net::UnixStream;
-#[cfg(target_family = "windows")]
-use tokio_tungstenite::tungstenite::{client, WebSocket};
-#[cfg(target_family = "unix")]
 use tokio_tungstenite::{client_async, WebSocketStream};
-#[cfg(target_family = "windows")]
-use uds_windows::UnixStream;
 
 use crate::{api::common::ErrorResponse, utils::misc};
 
@@ -105,12 +98,17 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     Ok(json)
 }
 
-#[cfg(target_family = "unix")]
 pub async fn connect_to_server_console(
     server_name: String,
-) -> Result<WebSocketStream<UnixStream>, String> {
+) -> Result<WebSocketStream<tokio::net::UnixStream>, String> {
     // Connect to WebSocket over Unix socket
-    let stream = UnixStream::connect(misc::default_octyne_path())
+    #[cfg(target_family = "windows")]
+    let stream = futures_util::io::AllowStdIo::new(
+        uds_windows::UnixStream::connect(misc::default_octyne_path())
+            .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?,
+    );
+    #[cfg(target_family = "unix")]
+    let stream = tokio::net::UnixStream::connect(misc::default_octyne_path())
         .await
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
     let (socket, response) = client_async(
@@ -118,24 +116,6 @@ pub async fn connect_to_server_console(
         stream,
     )
     .await
-    .map_err(|e| format!("Error connecting to WebSocket! {}", e))?;
-
-    // If the server refused to upgrade to WebSocket
-    check_websocket_conn_response(response)?;
-    Ok(socket)
-}
-
-#[cfg(target_family = "windows")]
-pub async fn connect_to_server_console(
-    server_name: String,
-) -> Result<WebSocket<UnixStream>, String> {
-    // Connect to WebSocket over Unix socket
-    let stream = UnixStream::connect(misc::default_octyne_path())
-        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
-    let (socket, response) = client(
-        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
-        stream,
-    )
     .map_err(|e| format!("Error connecting to WebSocket! {}", e))?;
 
     // If the server refused to upgrade to WebSocket

@@ -2,11 +2,8 @@ use std::fmt::Write;
 use std::{collections::HashMap, env, process::exit};
 
 use crate::api::server::connect_to_server_console;
-#[cfg(target_family = "unix")]
 use futures_util::StreamExt;
 use minus::MinusError;
-#[cfg(target_family = "unix")]
-use pager::Pager;
 use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
 
 fn minus_page_lines(lines: &str) -> Result<(), MinusError> {
@@ -39,8 +36,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         opts.contains_key("use-builtin-pager") || env::var("PAGER").eq(&Ok(String::new()));
 
     // Connect to WebSocket over Unix socket
-    #[allow(unused_mut)] // Windows needs this.
-    let mut socket = connect_to_server_console(args[1].clone())
+    let socket = connect_to_server_console(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
@@ -49,54 +45,37 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
 
     // FIXME: Implement proper `console` command, everything so far is just copy paste from `logs`..
     // Split the socket and then read a single message from it
-    #[cfg(target_family = "unix")]
     let (write, read) = socket.split();
-    #[cfg(target_family = "unix")]
     let (item, read) = read.into_future().await;
-    #[cfg(target_family = "unix")]
-    if item.is_none() {
-        println!("Error: Received no message from Octyne!");
-        exit(1);
-    }
-    #[cfg(target_family = "unix")]
-    let item = item.unwrap();
-    #[cfg(target_family = "windows")]
-    let item = socket.read();
-    // Everything here onwards is OS-independent.
-    let item = item.unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    });
+    let item = item
+        .unwrap_or_else(|| {
+            println!("Error: Received no message from Octyne!");
+            exit(1);
+        })
+        .unwrap_or_else(|e| {
+            println!("Error: {}", e);
+            exit(1);
+        });
     if item.is_close() {
         println!("Error: Received close message from Octyne!");
         exit(1);
     }
-    let item = item.to_text().unwrap();
+    let item = item.to_text().unwrap_or_else(|e| {
+        println!("Error: {}", e);
+        exit(1);
+    });
 
     // Close the WebSocket connection.
-    #[cfg(target_family = "unix")]
-    {
-        let mut socket = read.reunite(write).unwrap_or_else(|e| {
-            println!("Error: {}", e);
-            exit(1);
-        });
-        socket
-            .close(Some(CloseFrame {
-                code: CloseCode::Normal,
-                reason: "Done".into(),
-            }))
-            .await
-            .unwrap_or_else(|e| {
-                println!("Error: {}", e);
-                exit(1);
-            });
-    }
-    #[cfg(target_family = "windows")]
+    let mut socket = read.reunite(write).unwrap_or_else(|e| {
+        println!("Error: {}", e);
+        exit(1);
+    });
     socket
         .close(Some(CloseFrame {
             code: CloseCode::Normal,
             reason: "Done".into(),
         }))
+        .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
             exit(1);
@@ -105,18 +84,17 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     // Log the output.
     if no_pager {
         return println!("{}", item);
-    } else if use_minus || cfg!(target_family = "windows") {
-        return minus_page_lines(item).unwrap_or_else(|e| {
-            println!("Error: {}", e);
-            exit(1);
-        });
     }
     #[cfg(target_family = "unix")]
-    {
-        Pager::with_default_pager("less").setup();
+    if !use_minus {
+        pager::Pager::with_default_pager("less").setup();
         println!("{}", item);
         exit(0);
     }
+    minus_page_lines(item).unwrap_or_else(|e| {
+        println!("Error: {}", e);
+        exit(1);
+    });
 }
 
 pub fn console_cmd_help() {
@@ -129,6 +107,8 @@ use the `logs` command instead.
 Usage: octynectl console [OPTIONS] [APP NAME]
 
 Options:
-    -h, --help               Print help information"
+    -h, --help               Print help information
+    --no-interactive         Don't setup an interactive console for an end user,
+                             just accept stdin and log output to stdout"
     );
 }
