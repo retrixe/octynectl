@@ -114,31 +114,24 @@ pub async fn connect_to_server_console(
     let stream = tokio::net::UnixStream::connect(misc::default_octyne_path())
         .await
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
-    let (socket, response) = client_async(
+    let (socket, _) = client_async(
         format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
         stream,
     )
     .await
-    .map_err(|e| format!("Error connecting to WebSocket! {}", e))?;
-
-    // If the server refused to upgrade to WebSocket
-    check_websocket_conn_response(response)?;
-    Ok(socket)
-}
-
-#[cfg(target_family = "unix")]
-fn check_websocket_conn_response(response: hyper::Response<Option<Vec<u8>>>) -> Result<(), String> {
-    if response.status() != 101 {
-        return Err(format!(
-            "Error: Received status code {} from Octyne!{}",
-            response.status(),
-            response.body().as_ref().map_or("".to_string(), |body| {
-                " Reason: ".to_string()
-                    + &serde_json::from_slice(body.as_slice())
+    .map_err(|e| {
+        if let tokio_tungstenite::tungstenite::Error::Http(response) = e {
+            response.body().as_ref().map_or(
+                format!("Failed to connect to WebSocket! {}", response.status()),
+                |body| {
+                    serde_json::from_slice(body.as_slice())
                         .map(|json: ErrorResponse| json.error)
-                        .unwrap_or("N/A".to_string())
-            })
-        ));
-    }
-    Ok(())
+                        .unwrap_or(response.status().to_string())
+                },
+            )
+        } else {
+            format!("Failed to connect to WebSocket! {}", e)
+        }
+    })?;
+    Ok(socket)
 }

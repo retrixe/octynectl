@@ -31,9 +31,11 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         );
         exit(1);
     }
-    let no_pager = opts.contains_key("no-pager") || env::var("NOPAGER").eq(&Ok("true".to_string()));
-    let use_minus =
-        opts.contains_key("use-builtin-pager") || env::var("PAGER").eq(&Ok(String::new()));
+    let pager_env = env::var("PAGER");
+    let use_minus = opts.contains_key("use-builtin-pager") || pager_env.eq(&Ok(String::new()));
+    let no_pager = opts.contains_key("no-pager") // --no-pager is set
+        || env::var("NOPAGER").eq(&Ok("true".to_string())) // $NOPAGER is set
+        || (!atty::is(atty::Stream::Stdout) && pager_env.is_err() && !use_minus); // no TTY or pager
 
     // Connect to WebSocket over Unix socket
     let socket = connect_to_server_console(args[1].clone())
@@ -106,7 +108,8 @@ can use it on Unix-like systems too (e.g. Linux, macOS) by passing the
 `--use-builtin-pager` flag, or setting the $PAGER env variable to empty string.
 
 The pager can be disabled entirely by setting the $NOPAGER environment variable
-to `true`, or by using the `--no-pager` flag.
+to `true`, or by using the `--no-pager` flag. If stdout is not a terminal, the
+pager will be disabled unless $PAGER or the `--use-builtin-pager` flag is set.
 
 Usage: octynectl logs [OPTIONS] [APP NAME]
 
