@@ -7,6 +7,8 @@ use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::codec::{FramedRead, LinesCodec};
 
+// TODO: Support console-v2 (send periodic keep-alive pings, receive JSON formatted messages)
+// https://github.com/retrixe/octyne/blob/main/API.md#ws-serveridconsoleticketticket
 pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -35,9 +37,10 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             exit(1);
         });
     let (write, read) = socket.split();
+    // Create a channel to let all reads finish, not vice versa because writes will probably fail
+    // TODO: Ideally we should have no sudden exits in the code...
+    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
-    // The threads don't close each other because if the read thread errors, it's unlikely writing
-    // a close message will work, and vice versa? TODO: But then the read thread doesn't get flushed
     // Construct pager
     /* let mut output = if no_interactive {
         Option::Some(minus::Pager::new())
@@ -45,7 +48,6 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         Option::None
     }; */
     // Create read thread
-    // let (tx, rx) = tokio::sync::oneshot::channel::<()>();
     tokio::spawn(async move {
         let mut read = read;
         while let Some(item) = read.next().await {
@@ -54,8 +56,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                 exit(1);
             });
             if item.is_close() {
-                println!("Read error: Received close message from Octyne!");
-                exit(1);
+                break; // println!("Read error: Received close message from Octyne!"); exit(1);
             }
             let item = item.to_text().unwrap_or_else(|e| {
                 println!("Read error: {}", e);
@@ -72,8 +73,9 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             }); */
             println!("{}", item);
         }
-        // tx.send(()).unwrap(); // Non-issue, this channel just ensures read is flushed before exit
+        tx.send(()).unwrap(); // Signal write thread to terminate
     });
+
     // Create write thread
     let mut write = write;
     let stdin = tokio::io::stdin();
@@ -91,6 +93,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             exit(1);
         });
     }
+
     // Gracefully exit on EOF
     write
         .send(Message::Close(Some(CloseFrame {
@@ -106,11 +109,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         println!("Error: {}", e);
         exit(1);
     });
-    // Wait for the read thread to exit
-    /* rx.await.unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    }); */
+    rx.await.unwrap(); // Wait for the read thread to finish reading and exit
     exit(0);
 }
 

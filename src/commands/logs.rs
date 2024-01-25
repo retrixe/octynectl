@@ -14,6 +14,8 @@ fn minus_page_lines(lines: &str) -> Result<(), MinusError> {
     Ok(())
 }
 
+// TODO: Support console-v2 (receive JSON formatted messages)
+// https://github.com/retrixe/octyne/blob/main/API.md#ws-serveridconsoleticketticket
 pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
