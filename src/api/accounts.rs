@@ -78,19 +78,19 @@ async fn post_patch_account(
     password: String,
     method: Method,
 ) -> Result<bool, String> {
-    let body = serde_json::to_string(&PostAccountRequest { username, password });
-    if let Err(err) = body {
-        return Err(err.to_string());
-    }
+    let body = match serde_json::to_string(&PostAccountRequest { username, password }) {
+        Ok(body) => body,
+        Err(e) => return Err(e.to_string()),
+    };
     let mut endpoint = "/accounts".to_string();
-    if old_user.is_some() {
-        endpoint = format!("/accounts?username={}", old_user.unwrap());
+    if let Some(val) = old_user {
+        endpoint = format!("/accounts?username={}", val);
     }
     let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let req = Request::builder()
         .method(method)
         .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
-        .body(Full::from(body.unwrap()))
+        .body(Full::from(body))
         .expect("request builder");
     let response = client.request(req).await;
     let (res, body) = crate::utils::request::read_str(response).await?;

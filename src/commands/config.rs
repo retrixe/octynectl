@@ -101,9 +101,12 @@ pub async fn config_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
                         );
                         exit(1);
                     })
-                    .to_str()
-                    .unwrap()
-                    .to_owned(),
+                    .into_os_string()
+                    .into_string()
+                    .unwrap_or_else(|_| {
+                        println!("Error: Unable to find editor!");
+                        exit(1);
+                    }),
             };
             let config = match get_config().await {
                 Ok(config) => config,
