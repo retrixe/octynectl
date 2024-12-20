@@ -1,5 +1,7 @@
-use hyper::{Body, Client, Method, Request};
-use hyperlocal_with_windows::{UnixClientExt, Uri};
+use http_body_util::{Empty, Full};
+use hyper::{body::Bytes, Method, Request};
+use hyper_util::client::legacy::Client;
+use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -8,7 +10,7 @@ use crate::utils::misc;
 use super::common::{ActionResponse, ErrorResponse};
 
 pub async fn get_accounts() -> Result<Vec<String>, String> {
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let uri = Uri::new(misc::default_octyne_path(), "/accounts").into();
     let response = client.get(uri).await;
     let (res, body) = crate::utils::request::read_str(response).await?;
@@ -84,11 +86,11 @@ async fn post_patch_account(
     if old_user.is_some() {
         endpoint = format!("/accounts?username={}", old_user.unwrap());
     }
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let req = Request::builder()
         .method(method)
         .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
-        .body(Body::from(body.unwrap()))
+        .body(Full::from(body.unwrap()))
         .expect("request builder");
     let response = client.request(req).await;
     let (res, body) = crate::utils::request::read_str(response).await?;
@@ -113,11 +115,11 @@ async fn post_patch_account(
 
 pub async fn delete_account(username: String) -> Result<(), String> {
     let endpoint = format!("/accounts?username={}", username);
-    let client = Client::unix();
+    let client: Client<UnixConnector, Empty<Bytes>> = Client::unix();
     let req = Request::builder()
         .method(Method::DELETE)
         .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
-        .body(Body::empty())
+        .body(Empty::new())
         .expect("request builder");
     let response = client.request(req).await;
     let (res, body) = crate::utils::request::read_str(response).await?;

@@ -143,7 +143,7 @@ pub async fn accounts_cmd(args: Vec<String>, top_level_opts: HashMap<String, Str
         if any_errored {
             exit(1);
         } else {
-            println!("Successfully deleted all accounts!");
+            println!("Successfully deleted specified accounts!");
         }
     } else if args[1] == "passwd" {
         if top_level_opts.contains_key("h")

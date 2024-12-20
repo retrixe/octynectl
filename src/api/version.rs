@@ -1,5 +1,7 @@
-use hyper::Client;
-use hyperlocal_with_windows::{UnixClientExt, Uri};
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper_util::client::legacy::Client;
+use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Deserialize;
 
 use crate::utils::misc;
@@ -11,7 +13,7 @@ struct VersionResponse {
 }
 
 pub async fn get_version() -> Result<String, String> {
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let response = client
         .get(Uri::new(misc::default_octyne_path(), "/").into())
         .await;

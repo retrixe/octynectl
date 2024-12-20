@@ -1,5 +1,7 @@
-use hyper::Client;
-use hyperlocal_with_windows::{UnixClientExt, Uri};
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper_util::client::legacy::Client;
+use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -29,7 +31,7 @@ pub async fn get_servers(extra_info: bool) -> Result<Map<String, Value>, String>
         "/servers"
     };
     let url = Uri::new(misc::default_octyne_path(), endpoint).into();
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let response = client.get(url).await;
     let (res, body) = crate::utils::request::read_str(response).await?;
 

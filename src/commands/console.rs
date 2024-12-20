@@ -87,10 +87,13 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         if line.is_empty() {
             continue;
         }
-        write.send(Message::Text(line)).await.unwrap_or_else(|e| {
-            println!("Write error: {}", e);
-            exit(1);
-        });
+        write
+            .send(Message::Text(line.into()))
+            .await
+            .unwrap_or_else(|e| {
+                println!("Write error: {}", e);
+                exit(1);
+            });
     }
 
     // Gracefully exit on EOF

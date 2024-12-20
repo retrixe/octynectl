@@ -1,5 +1,7 @@
-use hyper::{Body, Client, Method, Request};
-use hyperlocal_with_windows::{UnixClientExt, Uri};
+use http_body_util::Full;
+use hyper::{body::Bytes, Method, Request};
+use hyper_util::client::legacy::Client;
+use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Deserialize;
 #[cfg(target_family = "unix")]
 use tokio_tungstenite::{client_async, WebSocketStream};
@@ -24,11 +26,11 @@ impl std::fmt::Display for PostServerAction {
 
 pub async fn post_server(server_name: String, action: PostServerAction) -> Result<(), String> {
     let endpoint = format!("/server/{}", server_name);
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let req = Request::builder()
         .method(Method::POST)
         .uri(Uri::new(misc::default_octyne_path(), endpoint.as_str()))
-        .body(Body::from(action.to_string().to_uppercase()))
+        .body(Full::from(action.to_string().to_uppercase()))
         .expect("request builder");
     let response = client.request(req).await;
     let (res, body) = crate::utils::request::read_str(response).await?;
@@ -77,7 +79,7 @@ pub struct GetServerResponse {
 
 pub async fn get_server(server_name: String) -> Result<GetServerResponse, String> {
     let endpoint = format!("/server/{}", server_name);
-    let client = Client::unix();
+    let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let uri = Uri::new(misc::default_octyne_path(), endpoint.as_str()).into();
     let response = client.get(uri).await;
     let (res, body) = crate::utils::request::read_str(response).await?;

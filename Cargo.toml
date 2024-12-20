@@ -7,19 +7,21 @@ edition = "2021"
 
 [dependencies]
 atty = "0.2.14"
-futures-util = { version = "0.3.28", features = ["io"] }
-hyper = { version = "0.14", features = ["full"] }
-hyperlocal-with-windows = { version = "0.8.2", features = ["client"] }
-minus = { version = "5.4.2", features = ["search", "static_output"] }
+futures-util = { version = "0.3.31", features = ["io"] }
+http-body-util = "0.1"
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+hyperlocal-with-windows = { version = "0.9.0", features = ["client"] }
+minus = { version = "5.6.1", features = ["search", "static_output"] }
 pathsearch = "0.2.0"
-rpassword = "7.2"
+rpassword = "7.3.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tempfile = "3.7.0"
+tempfile = "3.14.0"
 tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.20.0"
-tokio-util = { version = "0.7.10", features = ["codec"] }
-uds_windows = "1.0.2"
+tokio-tungstenite = "0.26.1"
+tokio-util = { version = "0.7.13", features = ["codec"] }
+uds_windows = "1.1.0"
 
 [target.'cfg(target_family = "unix")'.dependencies]
 pager = "0.16.1"
