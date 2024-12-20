@@ -36,8 +36,8 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             println!("Error: {}", e);
             exit(1);
         });
-    let (write, read) = socket.split();
-    // Create a channel to let all reads finish, not vice versa because writes will probably fail
+    let (mut write, read) = socket.split();
+    // Create a channel, if reading fails, terminate writing.
     // TODO: Ideally we should have no sudden exits in the code...
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
@@ -56,7 +56,8 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                 exit(1);
             });
             if item.is_close() {
-                break; // println!("Read error: Received close message from Octyne!"); exit(1);
+                println!("Read error: Received close message from Octyne!");
+                exit(1);
             }
             let item = item.to_text().unwrap_or_else(|e| {
                 println!("Read error: {}", e);
@@ -77,9 +78,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     });
 
     // Create write thread
-    let mut write = write;
-    let stdin = tokio::io::stdin();
-    let mut stdin = FramedRead::new(stdin, LinesCodec::new());
+    let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
     while let Some(line) = stdin.next().await {
         let line = line.unwrap_or_else(|e| {
             println!("Write error: {}", e);

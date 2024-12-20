@@ -22,7 +22,7 @@ pub async fn kill_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 
     let mut any_errored = false;
     for server_name in args[1..].iter() {
-        match post_server(server_name.to_string(), PostServerAction::Kill).await {
+        match post_server(server_name.to_string(), PostServerAction::Stop).await {
             Ok(_) => {}
             Err(e) => {
                 println!("Error killing {}: {}", server_name, e);

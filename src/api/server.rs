@@ -12,7 +12,7 @@ use super::common::ActionResponse;
 #[derive(Clone, Debug)]
 pub enum PostServerAction {
     Start,
-    Kill,
+    Stop,
     Term,
 }
 

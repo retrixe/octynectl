@@ -21,7 +21,7 @@ pub async fn restart_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     }
 
     let action = match opts.contains_key("k") || opts.contains_key("kill") {
-        true => PostServerAction::Kill,
+        true => PostServerAction::Stop,
         false => PostServerAction::Term,
     };
 
