@@ -61,6 +61,7 @@ Subcommands:
     console                  Interact with an app's console and send input
     config                   Edit/view/reload Octyne's config (`help config`)
     account(s), user(s)      Manage Octyne accounts (`help accounts`)
+    version                  Get the version of Octyne and octynectl
     help                     Print this help message and exit
 ";
 
@@ -84,6 +85,7 @@ pub fn help_cmd(args: Vec<String>) {
                 "account,accounts",
                 crate::commands::accounts::accounts_cmd_help,
             ),
+            ("version", crate::commands::version::version_cmd_help),
         ];
         if args.len() == 2 {
             for (aliases, help) in first_level.iter() {

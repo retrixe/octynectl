@@ -15,7 +15,7 @@ async fn main() {
     // Parse top-level options.
     let top_level_opts = crate::utils::options::parse_options(&mut args, true);
     if top_level_opts.contains_key("v") || top_level_opts.contains_key("version") {
-        println!("octynectl {}", env!("CARGO_PKG_VERSION"));
+        println!("octynectl version {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
@@ -51,6 +51,7 @@ async fn main() {
         "account" | "accounts" => {
             crate::commands::accounts::accounts_cmd(args, top_level_opts).await
         }
+        "version" => crate::commands::version::version_cmd(args, top_level_opts).await,
         _ => {
             println!(
                 "{}",
