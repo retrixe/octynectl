@@ -1,9 +1,10 @@
+#[cfg(target_family = "windows")]
+use crate::utils::unix_stream_windows::TokioCompatUnixStream;
 use http_body_util::Full;
 use hyper::{body::Bytes, Method, Request};
 use hyper_util::client::legacy::Client;
 use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Deserialize;
-#[cfg(target_family = "unix")]
 use tokio_tungstenite::{client_async, WebSocketStream};
 
 #[allow(unused_imports)]
@@ -107,12 +108,6 @@ pub async fn connect_to_server_console(
     server_name: String,
 ) -> Result<WebSocketStream<tokio::net::UnixStream>, String> {
     // Connect to WebSocket over Unix socket
-    #[cfg(target_family = "windows")]
-    let stream = futures_util::io::AllowStdIo::new(
-        uds_windows::UnixStream::connect(misc::default_octyne_path())
-            .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?,
-    );
-    #[cfg(target_family = "unix")]
     let stream = tokio::net::UnixStream::connect(misc::default_octyne_path())
         .await
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
@@ -135,5 +130,36 @@ pub async fn connect_to_server_console(
             format!("Failed to connect to WebSocket! {}", e)
         }
     })?;
+    Ok(socket)
+}
+
+#[cfg(target_family = "windows")]
+pub async fn connect_to_server_console(
+    server_name: String,
+) -> Result<WebSocketStream<TokioCompatUnixStream>, String> {
+    let stream = TokioCompatUnixStream::connect(misc::default_octyne_path())
+        .await
+        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
+
+    let (socket, _) = client_async(
+        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
+        stream,
+    )
+    .await
+    .map_err(|e| {
+        if let tokio_tungstenite::tungstenite::Error::Http(response) = e {
+            response.body().as_ref().map_or(
+                format!("Failed to connect to WebSocket! {}", response.status()),
+                |body| {
+                    serde_json::from_slice(body.as_slice())
+                        .map(|json: ErrorResponse| json.error)
+                        .unwrap_or(response.status().to_string())
+                },
+            )
+        } else {
+            format!("Failed to connect to WebSocket! {}", e)
+        }
+    })?;
+
     Ok(socket)
 }

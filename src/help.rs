@@ -76,9 +76,7 @@ pub fn help_cmd(args: Vec<String>) {
             ("kill", crate::commands::kill::kill_cmd_help),
             ("restart", crate::commands::restart::restart_cmd_help),
             ("status,info", crate::commands::status::status_cmd_help),
-            #[cfg(target_family = "unix")]
             ("logs", crate::commands::logs::logs_cmd_help),
-            #[cfg(target_family = "unix")]
             ("console", crate::commands::console::console_cmd_help),
             ("config", crate::commands::config::config_cmd_help),
             (
