@@ -2,6 +2,7 @@ use std::fmt::Write;
 use std::{collections::HashMap, env, process::exit};
 
 use crate::api::server::connect_to_server_console;
+use crossterm::tty::IsTty;
 use futures_util::StreamExt;
 use minus::MinusError;
 use tokio_tungstenite::tungstenite::protocol::{frame::coding::CloseCode, CloseFrame};
@@ -37,7 +38,7 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
     let use_minus = opts.contains_key("use-builtin-pager") || pager_env.eq(&Ok(String::new()));
     let no_pager = opts.contains_key("no-pager") // --no-pager is set
         || env::var("NOPAGER").eq(&Ok("true".to_string())) // $NOPAGER is set
-        || (!atty::is(atty::Stream::Stdout) && pager_env.is_err() && !use_minus); // no TTY or pager
+        || (!std::io::stdout().is_tty() && pager_env.is_err() && !use_minus); // no TTY or pager
 
     // Connect to WebSocket over Unix socket
     let socket = connect_to_server_console(args[1].clone())

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, process::exit};
 
 use crate::api::server::connect_to_server_console;
+use crossterm::tty::IsTty;
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
@@ -26,8 +27,8 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         );
         exit(1);
     }
-    let no_interactive = opts.contains_key("no-interactive") // --no-interactive is set
-        || !atty::is(atty::Stream::Stdout); // TTY is not present
+    let interactive = !opts.contains_key("no-interactive") // --no-interactive is unset
+        && std::io::stdout().is_tty(); // TTY is present
 
     // Connect to WebSocket over Unix socket
     let socket = connect_to_server_console(args[1].clone())
@@ -63,7 +64,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                 println!("Read error: {}", e);
                 exit(1);
             });
-            if no_interactive {
+            if !interactive {
                 println!("{}", item);
                 continue;
             }
