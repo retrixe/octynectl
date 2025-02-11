@@ -1,8 +1,9 @@
 use std::{collections::HashMap, process::exit};
 
 use crate::api::server::connect_to_server_console;
-use crossterm::tty::IsTty;
+use crossterm::{execute, tty::IsTty};
 use futures_util::{SinkExt, StreamExt};
+use tokio::{select, signal};
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
@@ -27,8 +28,6 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         );
         exit(1);
     }
-    let interactive = !opts.contains_key("no-interactive") // --no-interactive is unset
-        && std::io::stdout().is_tty(); // TTY is present
 
     // Connect to WebSocket over Unix socket
     let socket = connect_to_server_console(args[1].clone())
@@ -38,66 +37,76 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             exit(1);
         });
     let (mut write, read) = socket.split();
-    // Create a channel, if reading fails, terminate writing.
-    // TODO: Ideally we should have no sudden exits in the code...
-    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
-    // Construct pager
-    /* let mut output = if no_interactive {
-        Option::Some(minus::Pager::new())
-    } else {
-        Option::None
-    }; */
+    // Create a channel, if reading fails, terminate write thread and exit.
+    // CancellationToken may be better?...
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<(i32, String)>(1);
+
+    // If interactive, move to alternate screen
+    let interactive = !opts.contains_key("no-interactive") // --no-interactive is unset
+        && std::io::stdout().is_tty(); // TTY is present
+    if interactive {
+        execute!(std::io::stdout(), crossterm::terminal::EnterAlternateScreen).unwrap();
+    }
+
     // Create read thread
     tokio::spawn(async move {
         let mut read = read;
         while let Some(item) = read.next().await {
-            let item = item.unwrap_or_else(|e| {
-                println!("Read error: {}", e);
-                exit(1);
-            });
+            let item = match item {
+                Ok(message) => message,
+                Err(e) => {
+                    return tx.send((1, format!("Read error: {}", e))).await.unwrap();
+                }
+            };
             if item.is_close() {
-                println!("Read error: Received close message from Octyne!");
-                exit(1);
+                tx.send((1, "Read error: Received close message from Octyne!".into()))
+                    .await
+                    .unwrap();
+                return;
             }
-            let item = item.to_text().unwrap_or_else(|e| {
-                println!("Read error: {}", e);
-                exit(1);
-            });
-            if !interactive {
-                println!("{}", item);
-                continue;
-            }
-            // FIXME: Interactive session
-            /* minus_page_lines(item).unwrap_or_else(|e| {
-                println!("Error: {}", e);
-                exit(1);
-            }); */
-            println!("{}", item);
+            match item.to_text() {
+                Ok(item) => println!("{}", item),
+                Err(e) => {
+                    return tx.send((1, format!("Read error: {}", e))).await.unwrap();
+                }
+            };
         }
-        tx.send(()).unwrap(); // Signal write thread to terminate
+        tx.send((0, "Console closed by remote.".into()))
+            .await
+            .unwrap(); // Signal write thread to terminate
     });
 
     // Create write thread
+    let exit_reason: (i32, String);
     let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
-    while let Some(line) = stdin.next().await {
-        let line = line.unwrap_or_else(|e| {
-            println!("Write error: {}", e);
-            exit(1);
-        });
-        if line.is_empty() {
-            continue;
+    loop {
+        select! {
+                Some(line) = stdin.next() => {
+                    let line = match line {
+                        Ok(line) => line,
+                        Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                    };
+                    if line.is_empty() {
+                        continue;
+                    }
+                    match write.send(Message::Text(line.into())).await {
+                        Ok(()) => {}
+                        Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                    }
+                }
+                recv_exit_code = rx.recv() => break exit_reason = recv_exit_code.unwrap(),
+                _ = signal::ctrl_c() => break exit_reason = (0, "".into())
         }
-        write
-            .send(Message::Text(line.into()))
-            .await
-            .unwrap_or_else(|e| {
-                println!("Write error: {}", e);
-                exit(1);
-            });
     }
 
     // Gracefully exit on EOF
+    if interactive {
+        execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen).unwrap();
+    }
+    if exit_reason.0 != 0 {
+        println!("{}", exit_reason.1);
+    }
     write
         .send(Message::Close(Some(CloseFrame {
             code: CloseCode::Normal,
@@ -105,15 +114,19 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
         })))
         .await
         .unwrap_or_else(|e| {
-            println!("Error: {}", e);
-            exit(1);
+            if exit_reason.0 == 0 {
+                println!("Close error: {}", e);
+                exit(1);
+            }
         });
     write.close().await.unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
+        if exit_reason.0 == 0 {
+            println!("Close error: {}", e);
+            exit(1);
+        }
     });
-    rx.await.unwrap(); // Wait for the read thread to finish reading and exit
-    exit(0);
+
+    exit(exit_reason.0);
 }
 
 pub fn console_cmd_help() {
