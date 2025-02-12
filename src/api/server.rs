@@ -5,7 +5,7 @@ use http_body_util::Full;
 use hyper::{body::Bytes, Method, Request};
 use hyper_util::client::legacy::Client;
 use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 #[cfg(target_family = "unix")]
 use tokio::net::UnixStream;
 use tokio_tungstenite::{client_async, tungstenite::ClientRequestBuilder, WebSocketStream};
@@ -103,15 +103,20 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     Ok(json)
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConsoleMessage {
     #[serde(default)]
     pub r#type: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub message: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub data: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
+    pub id: String,
 }
 
 pub async fn connect_to_server_console_v1_fallback(

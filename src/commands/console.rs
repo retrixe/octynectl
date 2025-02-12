@@ -1,16 +1,21 @@
-use std::{collections::HashMap, process::exit};
+use std::{
+    collections::HashMap,
+    process::exit,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
-use crate::api::server::connect_to_server_console;
+use crate::api::server::{connect_to_server_console_v1_fallback, ConsoleMessage};
 use crossterm::{execute, tty::IsTty};
 use futures_util::{SinkExt, StreamExt};
-use tokio::{select, signal};
+use tokio::{
+    select, signal,
+    time::{interval_at, Instant},
+};
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::codec::{FramedRead, LinesCodec};
 
-// TODO: Support console-v2 (send periodic keep-alive pings, receive JSON formatted messages)
-// https://github.com/retrixe/octyne/blob/main/API.md#ws-serveridconsoleticketticket
 pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -30,7 +35,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     }
 
     // Connect to WebSocket over Unix socket
-    let socket = connect_to_server_console(args[1].clone(), false)
+    let (socket, v2) = connect_to_server_console_v1_fallback(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
@@ -66,7 +71,26 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                 return;
             }
             match item.to_text() {
-                Ok(item) => println!("{}", item),
+                Ok(item) => {
+                    if v2 {
+                        // Parse message
+                        let json: ConsoleMessage = match serde_json::from_str(item) {
+                            Ok(json) => json,
+                            Err(e) => {
+                                println!("Error: Received corrupt message from Octyne! {}", e);
+                                exit(1);
+                            }
+                        };
+                        if json.r#type == "output" {
+                            println!("{}", json.data);
+                        } else if json.r#type == "error" {
+                            let err = (1, format!("Error: {}", json.message));
+                            return tx.send(err).await.unwrap();
+                        } // Discard the rest
+                    } else {
+                        println!("{}", item)
+                    }
+                }
                 Err(e) => {
                     return tx.send((1, format!("Read error: {}", e))).await.unwrap();
                 }
@@ -79,6 +103,8 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
 
     // Create write thread
     let exit_reason: (i32, String);
+    let ping_duration = Duration::from_secs(5);
+    let mut interval = interval_at(Instant::now() + ping_duration, ping_duration);
     let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
     loop {
         select! {
@@ -90,9 +116,36 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                 if line.is_empty() {
                     continue;
                 }
-                match write.send(Message::Text(line.into())).await {
+                let message = if v2 {
+                    serde_json::to_string(&ConsoleMessage {
+                        r#type: "input".into(),
+                        data: line.clone(),
+                        message: "".into(),
+                        id: "".into(),
+                    })
+                    .unwrap()
+                } else {
+                    line
+                };
+                match write.send(Message::Text(message.into())).await {
                     Ok(()) => {}
                     Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                }
+            }
+            _ = interval.tick() => {
+                if v2 {
+                    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                    let message = serde_json::to_string(&ConsoleMessage {
+                        r#type: "ping".into(),
+                        data: "".into(),
+                        message: "".into(),
+                        id: timestamp.as_millis().to_string(),
+                    })
+                    .unwrap();
+                    match write.send(Message::Text(message.into())).await {
+                        Ok(()) => {}
+                        Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                    }
                 }
             }
             recv_exit_code = rx.recv() => break exit_reason = recv_exit_code.unwrap(),
