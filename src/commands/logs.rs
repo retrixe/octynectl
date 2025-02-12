@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::{collections::HashMap, env, process::exit};
 
-use crate::api::server::connect_to_server_console;
+use crate::api::server::{connect_to_server_console_v1_fallback, ConsoleMessage};
 use crossterm::tty::IsTty;
 use futures_util::StreamExt;
 use minus::MinusError;
@@ -15,8 +15,6 @@ fn minus_page_lines(lines: &str) -> Result<(), MinusError> {
     Ok(())
 }
 
-// TODO: Support console-v2 (receive JSON formatted messages)
-// https://github.com/retrixe/octyne/blob/main/API.md#ws-serveridconsoleticketticket
 pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>) {
     let mut args = args.clone();
     let opts = crate::utils::options::parse_options(&mut args, false);
@@ -41,7 +39,7 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         || (!std::io::stdout().is_tty() && pager_env.is_err() && !use_minus); // no TTY or pager
 
     // Connect to WebSocket over Unix socket
-    let (socket, _) = connect_to_server_console(args[1].clone())
+    let (socket, v2) = connect_to_server_console_v1_fallback(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
@@ -49,25 +47,57 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         });
 
     // Split the socket and then read a single message from it
-    let (write, read) = socket.split();
-    let (item, read) = read.into_future().await;
-    let item = item
-        .unwrap_or_else(|| {
-            println!("Error: Received no message from Octyne!");
+    let (write, mut read) = socket.split();
+    let logs: String;
+    loop {
+        // Receive message from Octyne
+        let item = match read.next().await {
+            Some(message) => message.unwrap_or_else(|e| {
+                println!("Error: {}", e);
+                exit(1);
+            }),
+            None => {
+                if !v2 {
+                    println!("Error: Received no message from Octyne!");
+                    exit(1);
+                }
+                continue;
+            }
+        };
+
+        // Handle the message
+        if item.is_close() {
+            println!("Error: Received close message from Octyne!");
             exit(1);
-        })
-        .unwrap_or_else(|e| {
+        } else if v2 && !item.is_text() {
+            continue;
+        }
+
+        let item = item.to_text().unwrap_or_else(|e| {
             println!("Error: {}", e);
             exit(1);
         });
-    if item.is_close() {
-        println!("Error: Received close message from Octyne!");
-        exit(1);
+        if v2 {
+            // Parse message
+            let json: ConsoleMessage = match serde_json::from_str(item) {
+                Ok(json) => json,
+                Err(e) => {
+                    println!("Error: Received corrupt message from Octyne! {}", e);
+                    exit(1);
+                }
+            };
+            if json.r#type == "output" {
+                logs = json.data;
+                break;
+            } else if json.r#type == "error" {
+                println!("Error: {}", json.message);
+                exit(1);
+            } // Discard the rest
+        } else {
+            logs = item.to_owned();
+            break;
+        }
     }
-    let item = item.to_text().unwrap_or_else(|e| {
-        println!("Error: {}", e);
-        exit(1);
-    });
 
     // Close the WebSocket connection.
     let mut socket = read.reunite(write).unwrap_or_else(|e| {
@@ -87,15 +117,15 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
 
     // Log the output.
     if no_pager {
-        return println!("{}", item);
+        return println!("{}", logs);
     }
     #[cfg(target_family = "unix")]
     if !use_minus {
         pager::Pager::with_default_pager("less").setup();
-        println!("{}", item);
+        println!("{}", logs);
         exit(0);
     }
-    minus_page_lines(item).unwrap_or_else(|e| {
+    minus_page_lines(&logs).unwrap_or_else(|e| {
         println!("Error: {}", e);
         exit(1);
     });

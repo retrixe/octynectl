@@ -103,9 +103,35 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
     Ok(json)
 }
 
-pub async fn connect_to_server_console(
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsoleMessage {
+    #[serde(default)]
+    pub r#type: String,
+    #[serde(default)]
+    pub message: String,
+    #[serde(default)]
+    pub data: String,
+}
+
+pub async fn connect_to_server_console_v1_fallback(
     server_name: String,
 ) -> Result<(WebSocketStream<UnixStream>, bool), String> {
+    match connect_to_server_console(server_name.clone(), true).await {
+        Ok(socket) => Ok((socket, true)),
+        Err(e) => {
+            if e.ends_with("Server sent no subprotocol") {
+                return Ok((connect_to_server_console(server_name, false).await?, false));
+            }
+            Err(e)
+        }
+    }
+}
+
+pub async fn connect_to_server_console(
+    server_name: String,
+    v2: bool,
+) -> Result<WebSocketStream<UnixStream>, String> {
     // Connect to WebSocket over Unix socket
     let stream = UnixStream::connect(misc::default_octyne_path())
         .await
@@ -114,8 +140,11 @@ pub async fn connect_to_server_console(
     let uri = format!("ws://localhost:42069/server/{}/console", server_name)
         .parse()
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
-    let req = ClientRequestBuilder::new(uri); // .with_header("Sec-WebSocket-Protocol", "console-v2");
-    let (socket, response) = client_async(req, stream).await.map_err(|e| {
+    let mut req = ClientRequestBuilder::new(uri);
+    if v2 {
+        req = req.with_sub_protocol("console-v2");
+    }
+    let (socket, _) = client_async(req, stream).await.map_err(|e| {
         if let tokio_tungstenite::tungstenite::Error::Http(response) = e {
             response.body().as_ref().map_or(
                 format!("Failed to connect to WebSocket! {}", response.status()),
@@ -130,7 +159,5 @@ pub async fn connect_to_server_console(
         }
     })?;
 
-    let protocol_header = response.headers().get("Sec-WebSocket-Protocol");
-    let v2 = protocol_header.is_some_and(|v| v.to_str().unwrap_or("") == "console-v2");
-    Ok((socket, v2))
+    Ok(socket)
 }

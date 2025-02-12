@@ -30,7 +30,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     }
 
     // Connect to WebSocket over Unix socket
-    let (socket, _) = connect_to_server_console(args[1].clone())
+    let socket = connect_to_server_console(args[1].clone(), false)
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
@@ -82,21 +82,21 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     let mut stdin = FramedRead::new(tokio::io::stdin(), LinesCodec::new());
     loop {
         select! {
-                Some(line) = stdin.next() => {
-                    let line = match line {
-                        Ok(line) => line,
-                        Err(e) => break exit_reason = (1, format!("Write error: {}", e))
-                    };
-                    if line.is_empty() {
-                        continue;
-                    }
-                    match write.send(Message::Text(line.into())).await {
-                        Ok(()) => {}
-                        Err(e) => break exit_reason = (1, format!("Write error: {}", e))
-                    }
+            Some(line) = stdin.next() => {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                };
+                if line.is_empty() {
+                    continue;
                 }
-                recv_exit_code = rx.recv() => break exit_reason = recv_exit_code.unwrap(),
-                _ = signal::ctrl_c() => break exit_reason = (0, "".into())
+                match write.send(Message::Text(line.into())).await {
+                    Ok(()) => {}
+                    Err(e) => break exit_reason = (1, format!("Write error: {}", e))
+                }
+            }
+            recv_exit_code = rx.recv() => break exit_reason = recv_exit_code.unwrap(),
+            _ = signal::ctrl_c() => break exit_reason = (0, "".into())
         }
     }
 
