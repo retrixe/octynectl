@@ -30,7 +30,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
     }
 
     // Connect to WebSocket over Unix socket
-    let socket = connect_to_server_console(args[1].clone())
+    let (socket, _) = connect_to_server_console(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);

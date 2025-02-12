@@ -5,7 +5,7 @@ use hyper::{body::Bytes, Method, Request};
 use hyper_util::client::legacy::Client;
 use hyperlocal_with_windows::{UnixClientExt, UnixConnector, Uri};
 use serde::Deserialize;
-use tokio_tungstenite::{client_async, WebSocketStream};
+use tokio_tungstenite::{client_async, tungstenite::ClientRequestBuilder, WebSocketStream};
 
 #[allow(unused_imports)]
 use crate::{api::common::ErrorResponse, utils::misc};
@@ -106,17 +106,16 @@ pub async fn get_server(server_name: String) -> Result<GetServerResponse, String
 #[cfg(target_family = "unix")]
 pub async fn connect_to_server_console(
     server_name: String,
-) -> Result<WebSocketStream<tokio::net::UnixStream>, String> {
+) -> Result<(WebSocketStream<tokio::net::UnixStream>, bool), String> {
     // Connect to WebSocket over Unix socket
     let stream = tokio::net::UnixStream::connect(misc::default_octyne_path())
         .await
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
-    let (socket, _) = client_async(
-        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
-        stream,
-    )
-    .await
-    .map_err(|e| {
+    let uri = format!("ws://localhost:42069/server/{}/console", server_name)
+        .parse()
+        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
+    let req = ClientRequestBuilder::new(uri); // .with_header("Sec-WebSocket-Protocol", "console-v2");
+    let (socket, response) = client_async(req, stream).await.map_err(|e| {
         if let tokio_tungstenite::tungstenite::Error::Http(response) = e {
             response.body().as_ref().map_or(
                 format!("Failed to connect to WebSocket! {}", response.status()),
@@ -130,23 +129,24 @@ pub async fn connect_to_server_console(
             format!("Failed to connect to WebSocket! {}", e)
         }
     })?;
-    Ok(socket)
+    let protocol_header = response.headers().get("Sec-WebSocket-Protocol");
+    let v2 = protocol_header.is_some_and(|v| v.to_str().unwrap_or("") == "console-v2");
+    Ok((socket, v2))
 }
 
 #[cfg(target_family = "windows")]
 pub async fn connect_to_server_console(
     server_name: String,
-) -> Result<WebSocketStream<TokioCompatUnixStream>, String> {
+) -> Result<(WebSocketStream<TokioCompatUnixStream>, bool), String> {
     let stream = TokioCompatUnixStream::connect(misc::default_octyne_path())
         .await
         .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
 
-    let (socket, _) = client_async(
-        format!("ws://localhost:42069/server/{}/console", server_name).as_str(),
-        stream,
-    )
-    .await
-    .map_err(|e| {
+    let uri = format!("ws://localhost:42069/server/{}/console", server_name)
+        .parse()
+        .map_err(|e| format!("Error connecting to Unix domain socket! {}", e))?;
+    let req = ClientRequestBuilder::new(uri); // .with_header("Sec-WebSocket-Protocol", "console-v2");
+    let (socket, response) = client_async(req, stream).await.map_err(|e| {
         if let tokio_tungstenite::tungstenite::Error::Http(response) = e {
             response.body().as_ref().map_or(
                 format!("Failed to connect to WebSocket! {}", response.status()),
@@ -161,5 +161,7 @@ pub async fn connect_to_server_console(
         }
     })?;
 
-    Ok(socket)
+    let protocol_header = response.headers().get("Sec-WebSocket-Protocol");
+    let v2 = protocol_header.is_some_and(|v| v.to_str().unwrap_or("") == "console-v2");
+    Ok((socket, v2))
 }

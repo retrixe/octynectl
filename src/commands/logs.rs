@@ -41,7 +41,7 @@ pub async fn logs_cmd(args: Vec<String>, top_level_opts: HashMap<String, String>
         || (!std::io::stdout().is_tty() && pager_env.is_err() && !use_minus); // no TTY or pager
 
     // Connect to WebSocket over Unix socket
-    let socket = connect_to_server_console(args[1].clone())
+    let (socket, _) = connect_to_server_console(args[1].clone())
         .await
         .unwrap_or_else(|e| {
             println!("Error: {}", e);
