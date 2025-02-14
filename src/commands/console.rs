@@ -72,7 +72,7 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
             }
             match item.to_text() {
                 Ok(item) => {
-                    if v2 {
+                    let output = if v2 {
                         // Parse message
                         let json: ConsoleMessage = match serde_json::from_str(item) {
                             Ok(json) => json,
@@ -82,14 +82,27 @@ pub async fn console_cmd(args: Vec<String>, top_level_opts: HashMap<String, Stri
                             }
                         };
                         if json.r#type == "output" {
-                            println!("{}", json.data);
+                            json.data
                         } else if json.r#type == "error" {
                             let err = (1, format!("Error: {}", json.message));
                             return tx.send(err).await.unwrap();
-                        } // Discard the rest
+                        } else {
+                            continue; // Discard the rest
+                        }
                     } else {
-                        println!("{}", item)
-                    }
+                        item.to_string()
+                    };
+                    /* TODO:
+                    execute!(
+                        std::io::stdout(),
+                        crossterm::cursor::SavePosition,
+                        crossterm::cursor::MoveToColumn(0)
+                    )
+                    .unwrap();
+                    println!();
+                    execute!(std::io::stdout(), crossterm::cursor::MoveUp(1)).unwrap(); */
+                    println!("{}", output.trim());
+                    // execute!(std::io::stdout(), crossterm::cursor::RestorePosition).unwrap();
                 }
                 Err(e) => {
                     return tx.send((1, format!("Read error: {}", e))).await.unwrap();
