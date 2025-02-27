@@ -39,7 +39,7 @@ pub async fn config_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
             exit(1);
         }
 
-        let config = get_config().await.unwrap_or_else(|e| {
+        let (config, _) = get_config().await.unwrap_or_else(|e| {
             println!("Error: {}", e);
             exit(1);
         });
@@ -108,14 +108,14 @@ pub async fn config_cmd(args: Vec<String>, top_level_opts: HashMap<String, Strin
                         exit(1);
                     }),
             };
-            let config = match get_config().await {
+            let (config, ext) = match get_config().await {
                 Ok(config) => config,
                 Err(e) => {
                     println!("Error retrieving config: {}", e);
                     exit(1);
                 }
             };
-            let temp_file = NamedTempFile::new().unwrap_or_else(|e| {
+            let temp_file = NamedTempFile::with_suffix(".".to_owned() + &ext).unwrap_or_else(|e| {
                 println!("Error creating temp file: {}", e);
                 exit(1);
             });

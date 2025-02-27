@@ -7,7 +7,7 @@ use crate::utils::misc;
 
 use super::common::{ActionResponse, ErrorResponse};
 
-pub async fn get_config() -> Result<String, String> {
+pub async fn get_config() -> Result<(String, String), String> {
     let url = Uri::new(misc::default_octyne_path(), "/config").into();
     let client: Client<UnixConnector, Full<Bytes>> = Client::unix();
     let response = client.get(url).await;
@@ -26,7 +26,15 @@ pub async fn get_config() -> Result<String, String> {
         );
         return Err(default);
     }
-    Ok(body)
+
+    let content_type = res.headers().get("Content-Type");
+    let content_type = content_type.map(|v| v.to_str().unwrap_or("")).unwrap_or("");
+    let (_, extension) = content_type.rsplit_once('/').unwrap_or(("", ""));
+    let mut extension = extension.to_string();
+    if extension.is_empty() {
+        extension = "json".to_string();
+    }
+    Ok((body, extension))
 }
 
 pub async fn get_config_reload() -> Result<(), String> {
